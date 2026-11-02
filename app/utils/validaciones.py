@@ -51,6 +51,33 @@ def validar_password(password: str) -> str:
     return password
 
 
+def validar_entero_en_rango(valor, nombre: str, minimo: int, maximo: int,
+                            codigo: str = "VALOR_INVALIDO") -> int:
+    """Valida que `valor` sea un entero dentro de [minimo, maximo].
+
+    Devuelve el entero. Lanza ErrorAPI(422) si no es entero o está fuera de
+    rango. `nombre` se usa para el mensaje; `codigo` para el error.
+    """
+    # Rechazamos booleanos (en Python bool es subclase de int) y no enteros.
+    if isinstance(valor, bool) or not isinstance(valor, int):
+        # Permitimos cadenas numéricas ("12"), pero no decimales.
+        try:
+            if isinstance(valor, str) and valor.strip().lstrip("-").isdigit():
+                valor = int(valor.strip())
+            else:
+                raise ValueError
+        except (ValueError, TypeError):
+            raise ErrorAPI(codigo, f"El campo '{nombre}' debe ser un entero.", 422)
+
+    if valor < minimo or valor > maximo:
+        raise ErrorAPI(
+            codigo,
+            f"El campo '{nombre}' debe estar entre {minimo} y {maximo}.",
+            422,
+        )
+    return valor
+
+
 def requerir_campos(datos: dict, campos: list[str]) -> None:
     """Verifica que los campos obligatorios estén presentes y no vacíos.
 
