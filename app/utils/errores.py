@@ -76,3 +76,43 @@ def registrar_manejadores_errores(app):
         if app.config.get("DEBUG"):
             mensaje = f"{mensaje} Detalle: {error}"
         return _respuesta_error("ERROR_INTERNO", mensaje, 500)
+
+
+def registrar_manejadores_jwt(jwt):
+    """Registra los callbacks de error de Flask-JWT-Extended.
+
+    Hace que los errores de autenticación usen el MISMO formato uniforme del
+    proyecto. Token ausente, inválido o vencido devuelven 401.
+    """
+
+    @jwt.unauthorized_loader
+    def falta_token(motivo):
+        """No se envió el token (cabecera Authorization ausente)."""
+        return _respuesta_error(
+            "TOKEN_AUSENTE",
+            "Se requiere autenticación para acceder a este recurso.", 401)
+
+    @jwt.invalid_token_loader
+    def token_invalido(motivo):
+        """El token está mal formado o la firma no es válida."""
+        return _respuesta_error(
+            "TOKEN_INVALIDO", "El token de autenticación no es válido.", 401)
+
+    @jwt.expired_token_loader
+    def token_vencido(cabecera, payload):
+        """El token expiró."""
+        return _respuesta_error(
+            "TOKEN_VENCIDO", "La sesión ha expirado. Inicia sesión de nuevo.",
+            401)
+
+    @jwt.revoked_token_loader
+    def token_revocado(cabecera, payload):
+        """El token fue revocado."""
+        return _respuesta_error(
+            "TOKEN_REVOCADO", "El token ha sido revocado.", 401)
+
+    @jwt.needs_fresh_token_loader
+    def token_no_fresco(cabecera, payload):
+        """Se requiere un token 'fresh' que no se proporcionó."""
+        return _respuesta_error(
+            "TOKEN_NO_FRESCO", "Se requiere una autenticación reciente.", 401)

@@ -16,7 +16,9 @@ from flask import Flask
 
 from app.config import obtener_configuracion
 from app.extensions import db, migrate, jwt, cors
-from app.utils.errores import registrar_manejadores_errores
+from app.utils.errores import (
+    registrar_manejadores_errores, registrar_manejadores_jwt,
+)
 
 
 def create_app(nombre_entorno: str | None = None) -> Flask:
@@ -35,11 +37,20 @@ def create_app(nombre_entorno: str | None = None) -> Flask:
     # --- Extensiones ---
     _inicializar_extensiones(app)
 
+    # --- Modelos ---
+    # Importamos los modelos para que queden registrados en el metadata de
+    # SQLAlchemy y Flask-Migrate pueda detectarlos.
+    with app.app_context():
+        from app import models  # noqa: F401
+
     # --- Manejo uniforme de errores ---
     registrar_manejadores_errores(app)
 
     # --- Blueprints (rutas) ---
     _registrar_blueprints(app)
+
+    # --- Comandos CLI (flask seed, etc.) ---
+    _registrar_comandos(app)
 
     return app
 
@@ -49,6 +60,8 @@ def _inicializar_extensiones(app: Flask) -> None:
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
+    # Hacemos que los errores de JWT usen el formato uniforme del proyecto.
+    registrar_manejadores_jwt(jwt)
     # CORS: solo permitimos los orígenes configurados, sobre las rutas /api/*
     cors.init_app(
         app,
@@ -60,7 +73,21 @@ def _inicializar_extensiones(app: Flask) -> None:
 def _registrar_blueprints(app: Flask) -> None:
     """Registra todos los blueprints bajo el prefijo /api."""
     from app.routes.salud import bp_salud
+    from app.routes.auth import bp_auth
+    from app.routes.usuarios import bp_usuarios
 
     app.register_blueprint(bp_salud, url_prefix="/api")
+    app.register_blueprint(bp_auth, url_prefix="/api")
+    app.register_blueprint(bp_usuarios, url_prefix="/api")
     # En fases siguientes se registrarán aquí los demás blueprints
-    # (auth, peliculas, salas, funciones, asientos, compras, etc.).
+    # (peliculas, salas, funciones, asientos, compras, etc.).
+
+
+def _registrar_comandos(app: Flask) -> None:
+    """Registra los comandos CLI personalizados de la aplicación."""
+
+    @app.cli.command("seed")
+    def seed():
+        """Carga datos de prueba de forma idempotente (flask seed)."""
+        from scripts.seed import ejecutar_seed
+        ejecutar_seed()
