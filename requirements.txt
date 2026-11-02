@@ -1,0 +1,27 @@
+# === SIVEC API - Dependencias ===
+# Framework web
+Flask==3.0.3
+
+# Base de datos (ORM + migraciones)
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.0.7
+psycopg2-binary==2.9.9
+
+# Autenticación y seguridad
+Flask-JWT-Extended==4.6.0
+bcrypt==4.2.0
+
+# CORS para el frontend React
+Flask-Cors==4.0.1
+
+# Configuración por variables de entorno
+python-dotenv==1.0.1
+
+# Tareas programadas (liberar reservas vencidas)
+APScheduler==3.10.4
+
+# Generación de códigos QR
+qrcode[pil]==7.4.2
+
+# Pruebas
+pytest==8.3.3

@@ -1,0 +1,26 @@
+# Entorno virtual
+venv/
+.venv/
+
+# Variables de entorno (nunca subir secretos)
+.env
+
+# Cachés de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Respaldos de base de datos
+backups/
+
+# Cobertura y pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Archivos de IDE / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
