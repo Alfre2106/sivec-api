@@ -52,6 +52,10 @@ def create_app(nombre_entorno: str | None = None) -> Flask:
     # --- Comandos CLI (flask seed, etc.) ---
     _registrar_comandos(app)
 
+    # --- Scheduler: expiración automática de reservas ---
+    from app.scheduler import iniciar_scheduler
+    iniciar_scheduler(app)
+
     return app
 
 
@@ -78,6 +82,9 @@ def _registrar_blueprints(app: Flask) -> None:
     from app.routes.peliculas import bp_peliculas
     from app.routes.salas import bp_salas
     from app.routes.funciones import bp_funciones
+    from app.routes.reservas import bp_reservas
+    from app.routes.compras import bp_compras
+    from app.routes.entradas import bp_entradas
 
     app.register_blueprint(bp_salud, url_prefix="/api")
     app.register_blueprint(bp_auth, url_prefix="/api")
@@ -85,8 +92,11 @@ def _registrar_blueprints(app: Flask) -> None:
     app.register_blueprint(bp_peliculas, url_prefix="/api")
     app.register_blueprint(bp_salas, url_prefix="/api")
     app.register_blueprint(bp_funciones, url_prefix="/api")
+    app.register_blueprint(bp_reservas, url_prefix="/api")
+    app.register_blueprint(bp_compras, url_prefix="/api")
+    app.register_blueprint(bp_entradas, url_prefix="/api")
     # En fases siguientes se registrarán aquí los demás blueprints
-    # (asientos, reservas, compras, entradas, validaciones, reportes, etc.).
+    # (validaciones, reportes, etc.).
 
 
 def _registrar_comandos(app: Flask) -> None:

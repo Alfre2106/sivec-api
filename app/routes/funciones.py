@@ -4,7 +4,7 @@ from flask import Blueprint, jsonify, request
 
 from app.services.funciones_service import (
     listar_funciones, obtener_funcion, asientos_disponibles_de,
-    crear_funcion, editar_funcion, eliminar_funcion,
+    crear_funcion, editar_funcion, eliminar_funcion, mapa_asientos,
 )
 from flask_jwt_extended import verify_jwt_in_request
 
@@ -58,6 +58,23 @@ def detalle(funcion_id):
     funcion = obtener_funcion(funcion_id)
     disponibles = asientos_disponibles_de(funcion.id)
     return jsonify({"funcion": serializar_funcion(funcion, disponibles)}), 200
+
+
+@bp_funciones.get("/funciones/<int:funcion_id>/asientos")
+def asientos(funcion_id):
+    """Público (token opcional): mapa de asientos de la función.
+
+    Si viene un token válido, marca 'mio' en los asientos reservados por ese
+    usuario e incluye su 'vence_en'.
+    """
+    usuario_id = None
+    try:
+        verify_jwt_in_request(optional=True)
+        usuario_id = id_usuario_actual()
+    except Exception:  # noqa: BLE001 - sin token válido, se trata como anónimo
+        usuario_id = None
+
+    return jsonify(mapa_asientos(funcion_id, usuario_id)), 200
 
 
 @bp_funciones.post("/funciones")

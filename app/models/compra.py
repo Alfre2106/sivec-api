@@ -39,6 +39,8 @@ class Compra(db.Model):
 
     cliente = db.relationship("Cliente", back_populates="compras")
     entradas = db.relationship("Entrada", back_populates="compra")
+    # Relación de solo lectura hacia la función (sin cambiar el esquema).
+    funcion = db.relationship("Funcion")
 
     def __repr__(self) -> str:
         return f"<Compra {self.id} total={self.total} ({self.estado_pago.value})>"

@@ -36,6 +36,14 @@ class ConfiguracionBase:
     # --- Reglas de negocio ---
     RESERVA_DURACION_MINUTOS = int(os.getenv("RESERVA_DURACION_MINUTOS", "5"))
     ZONA_HORARIA = os.getenv("ZONA_HORARIA", "America/Bogota")
+    # Máximo de asientos que se pueden reservar en una sola solicitud.
+    MAX_ASIENTOS_POR_RESERVA = int(os.getenv("MAX_ASIENTOS_POR_RESERVA", "8"))
+    # Máximo de reservas activas por usuario en una misma función.
+    MAX_RESERVAS_ACTIVAS_POR_FUNCION = int(
+        os.getenv("MAX_RESERVAS_ACTIVAS_POR_FUNCION", "8"))
+    # Intervalo del job que expira reservas vencidas (segundos).
+    SCHEDULER_INTERVALO_SEGUNDOS = int(
+        os.getenv("SCHEDULER_INTERVALO_SEGUNDOS", "30"))
 
 
 class ConfiguracionDesarrollo(ConfiguracionBase):

@@ -55,6 +55,66 @@ def asientos_disponibles_de(funcion_id: int) -> int:
     return _mapa_asientos_disponibles([funcion_id]).get(funcion_id, 0)
 
 
+def mapa_asientos(funcion_id: int, usuario_id=None) -> dict:
+    """Construye el mapa de asientos de una función, agrupado por filas.
+
+    El estado se calcula de forma efectiva (una reserva vencida se muestra como
+    'disponible' sin escribir en la base). Si `usuario_id` viene, marca 'mio' e
+    incluye 'vence_en' en los asientos reservados por ese usuario y vigentes.
+    """
+    # Importación local para evitar ciclos (reservas_service usa funciones_service).
+    from app.services.reservas_service import estado_asiento_efectivo
+    from app.models.reserva import Reserva
+    from app.models.enums import EstadoReserva
+    from app.utils.funciones_tiempo import estado_efectivo
+    from app.utils.tiempo import a_iso_bogota, ahora_utc
+
+    funcion = obtener_funcion(funcion_id)
+    ahora = ahora_utc()
+
+    asientos = (AsientoFuncion.query
+                .filter_by(funcion_id=funcion_id)
+                .order_by(AsientoFuncion.fila, AsientoFuncion.numero)
+                .all())
+
+    # Reservas activas vigentes del usuario autenticado en esta función.
+    mis_reservas_por_asiento = {}
+    if usuario_id is not None:
+        mis = (Reserva.query
+               .join(AsientoFuncion, Reserva.asiento_id == AsientoFuncion.id)
+               .filter(AsientoFuncion.funcion_id == funcion_id,
+                       Reserva.usuario_id == usuario_id,
+                       Reserva.estado == EstadoReserva.ACTIVA,
+                       Reserva.vence_en >= ahora)
+               .all())
+        mis_reservas_por_asiento = {r.asiento_id: r for r in mis}
+
+    filas = {}
+    for asiento in asientos:
+        estado = estado_asiento_efectivo(asiento, ahora)
+        info = {
+            "id": asiento.id,
+            "numero": asiento.numero,
+            "estado": estado.value,
+            "mio": False,
+        }
+        reserva_mia = mis_reservas_por_asiento.get(asiento.id)
+        if reserva_mia is not None and estado == EstadoAsiento.RESERVADO:
+            info["mio"] = True
+            info["vence_en"] = a_iso_bogota(reserva_mia.vence_en)
+        filas.setdefault(asiento.fila, []).append(info)
+
+    filas_lista = [{"fila": letra, "asientos": filas[letra]}
+                   for letra in sorted(filas.keys())]
+
+    return {
+        "funcion_id": funcion.id,
+        "estado_funcion": estado_efectivo(funcion).value,
+        "precio": funcion.precio,
+        "filas": filas_lista,
+    }
+
+
 # --- Consultas ------------------------------------------------------------
 
 def listar_funciones(pelicula_id=None, fecha=None, todas=False):

@@ -64,6 +64,45 @@ def serializar_sala(sala) -> dict:
     }
 
 
+def numero_compra(compra) -> str:
+    """Número legible de compra: 'C-' + id con 6 dígitos (ej. C-000012)."""
+    return f"C-{compra.id:06d}"
+
+
+def serializar_compra(compra) -> dict:
+    """Serializa una compra con su función (resumen) anidada."""
+    return {
+        "id": compra.id,
+        "numero": numero_compra(compra),
+        "funcion": {
+            "id": compra.funcion_id,
+            "pelicula": compra.funcion.pelicula.titulo if compra.funcion else None,
+            "inicio": a_iso_bogota(compra.funcion.inicio) if compra.funcion else None,
+        },
+        "total": compra.total,
+        "metodo_pago": compra.metodo_pago,
+        "estado_pago": compra.estado_pago.value,
+        "creado_en": a_iso_bogota(compra.creado_en),
+    }
+
+
+def serializar_entrada(entrada, con_asiento=True) -> dict:
+    """Serializa una entrada. Incluye fila/numero del asiento si se pide."""
+    datos = {
+        "id": entrada.id,
+        "codigo": entrada.codigo,
+        "estado": entrada.estado.value,
+        "usada_en": a_iso_bogota(entrada.usada_en) if entrada.usada_en else None,
+    }
+    if con_asiento:
+        from app.models.asiento_funcion import AsientoFuncion
+        from app.extensions import db
+        asiento = db.session.get(AsientoFuncion, entrada.asiento_id)
+        datos["fila"] = asiento.fila if asiento else None
+        datos["numero"] = asiento.numero if asiento else None
+    return datos
+
+
 def serializar_funcion(funcion, asientos_disponibles: int | None = None) -> dict:
     """Serializa una función con su película y sala anidadas.
 
