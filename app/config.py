@@ -44,6 +44,10 @@ class ConfiguracionBase:
     # Intervalo del job que expira reservas vencidas (segundos).
     SCHEDULER_INTERVALO_SEGUNDOS = int(
         os.getenv("SCHEDULER_INTERVALO_SEGUNDOS", "30"))
+    # Minutos de anticipación con los que se acepta validar una entrada
+    # antes del inicio de la función (ventana de validación en puerta).
+    VALIDACION_ANTICIPACION_MINUTOS = int(
+        os.getenv("VALIDACION_ANTICIPACION_MINUTOS", "120"))
 
 
 class ConfiguracionDesarrollo(ConfiguracionBase):

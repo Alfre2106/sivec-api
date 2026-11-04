@@ -5,6 +5,7 @@ from flask import Blueprint, jsonify, request
 from app.services.funciones_service import (
     listar_funciones, obtener_funcion, asientos_disponibles_de,
     crear_funcion, editar_funcion, eliminar_funcion, mapa_asientos,
+    cancelar_funcion, compras_afectadas_funcion,
 )
 from flask_jwt_extended import verify_jwt_in_request
 
@@ -103,3 +104,21 @@ def eliminar(funcion_id):
     """Administrador: elimina una función si no tiene ventas."""
     eliminar_funcion(funcion_id, admin_id=id_usuario_actual())
     return jsonify({"mensaje": "Función eliminada."}), 200
+
+
+@bp_funciones.post("/funciones/<int:funcion_id>/cancelar")
+@rol_requerido("administrador")
+def cancelar(funcion_id):
+    """Administrador: cancela la función y anula sus entradas activas."""
+    datos = request.get_json(silent=True) or {}
+    resultado = cancelar_funcion(
+        funcion_id, motivo=datos.get("motivo"), admin_id=id_usuario_actual())
+    return jsonify(resultado), 200
+
+
+@bp_funciones.get("/funciones/<int:funcion_id>/afectados")
+@rol_requerido("administrador")
+def afectados(funcion_id):
+    """Administrador: compras afectadas por la función (para reembolso)."""
+    compras = compras_afectadas_funcion(funcion_id)
+    return jsonify({"compras_afectadas": compras}), 200

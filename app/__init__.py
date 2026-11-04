@@ -85,6 +85,7 @@ def _registrar_blueprints(app: Flask) -> None:
     from app.routes.reservas import bp_reservas
     from app.routes.compras import bp_compras
     from app.routes.entradas import bp_entradas
+    from app.routes.validaciones import bp_validaciones
 
     app.register_blueprint(bp_salud, url_prefix="/api")
     app.register_blueprint(bp_auth, url_prefix="/api")
@@ -95,8 +96,9 @@ def _registrar_blueprints(app: Flask) -> None:
     app.register_blueprint(bp_reservas, url_prefix="/api")
     app.register_blueprint(bp_compras, url_prefix="/api")
     app.register_blueprint(bp_entradas, url_prefix="/api")
+    app.register_blueprint(bp_validaciones, url_prefix="/api")
     # En fases siguientes se registrarán aquí los demás blueprints
-    # (validaciones, reportes, etc.).
+    # (reportes, etc.).
 
 
 def _registrar_comandos(app: Flask) -> None:

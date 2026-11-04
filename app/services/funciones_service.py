@@ -18,7 +18,9 @@ from app.models.asiento_funcion import AsientoFuncion
 from app.models.reserva import Reserva
 from app.models.compra import Compra
 from app.models.entrada import Entrada
-from app.models.enums import EstadoFuncion, EstadoAsiento
+from app.models.enums import (
+    EstadoFuncion, EstadoAsiento, EstadoEntrada, EstadoReserva,
+)
 from app.services.auditoria_service import registrar_auditoria
 from app.services.peliculas_service import obtener_pelicula
 from app.services.salas_service import obtener_sala
@@ -376,6 +378,130 @@ def _editar_estructura(funcion: Funcion, datos: dict, cambios: dict) -> Funcion:
         _generar_asientos(funcion, nueva_sala)
 
     return funcion
+
+
+def cancelar_funcion(funcion_id: int, motivo: str, admin_id: int) -> dict:
+    """Cancela una función y anula sus entradas activas (RN-10, CA-15).
+
+    En una transacción, bloquea la función FOR UPDATE; no se puede cancelar si
+    ya está cancelada o finalizada. Luego: función -> cancelada; entradas
+    ACTIVAS -> anulada (las usadas no se tocan); reservas activas -> cancelada
+    y sus asientos reservados -> disponible. Devuelve el detalle de reembolso.
+    """
+    from app.models.compra import Compra
+    from app.models.cliente import Cliente
+    from app.models.enums import EstadoPago
+    from app.utils.funciones_tiempo import estado_efectivo
+    from app.utils.serializadores import serializar_funcion, numero_compra
+
+    motivo = (motivo or "").strip()
+    if not motivo:
+        raise ErrorAPI("MOTIVO_REQUERIDO",
+                       "El motivo de la cancelación es obligatorio.", 422)
+
+    try:
+        # Bloqueo de la fila de la función: serializa contra reservas/compras
+        # que la leen con FOR SHARE.
+        funcion = (Funcion.query
+                   .filter_by(id=funcion_id)
+                   .with_for_update()
+                   .first())
+        if funcion is None:
+            raise ErrorAPI("FUNCION_NO_ENCONTRADA", "La función no existe.", 404)
+
+        efectivo = estado_efectivo(funcion)
+        if efectivo == EstadoFuncion.CANCELADA:
+            raise ErrorAPI("FUNCION_YA_CANCELADA",
+                           "La función ya está cancelada.", 409)
+        if efectivo == EstadoFuncion.FINALIZADA:
+            raise ErrorAPI("FUNCION_FINALIZADA",
+                           "No se puede cancelar una función ya finalizada.",
+                           409)
+
+        # 1) Función -> cancelada.
+        funcion.estado = EstadoFuncion.CANCELADA
+
+        # 2) Entradas ACTIVAS -> anulada (las usadas no se tocan).
+        entradas_activas = (Entrada.query
+                            .filter_by(funcion_id=funcion.id,
+                                       estado=EstadoEntrada.ACTIVA)
+                            .all())
+        for entrada in entradas_activas:
+            entrada.estado = EstadoEntrada.ANULADA
+        entradas_anuladas = len(entradas_activas)
+
+        # 3) Reservas activas -> cancelada; asientos reservados -> disponible.
+        reservas = (Reserva.query
+                    .join(AsientoFuncion,
+                          Reserva.asiento_id == AsientoFuncion.id)
+                    .filter(AsientoFuncion.funcion_id == funcion.id,
+                            Reserva.estado == EstadoReserva.ACTIVA)
+                    .with_for_update()
+                    .all())
+        for reserva in reservas:
+            reserva.estado = EstadoReserva.CANCELADA
+            asiento = db.session.get(AsientoFuncion, reserva.asiento_id)
+            if asiento and asiento.estado == EstadoAsiento.RESERVADO:
+                asiento.estado = EstadoAsiento.DISPONIBLE
+
+        registrar_auditoria(
+            usuario_id=admin_id, accion="cancelar_funcion",
+            entidad="funciones", entidad_id=funcion.id,
+            detalle={"motivo": motivo,
+                     "entradas_anuladas": entradas_anuladas,
+                     "reservas_canceladas": len(reservas)})
+        db.session.commit()
+    except ErrorAPI:
+        raise
+    except Exception:
+        db.session.rollback()
+        raise
+
+    compras_afectadas = _compras_afectadas(funcion_id)
+    total_a_reembolsar = sum(c["total"] for c in compras_afectadas)
+    return {
+        "funcion": serializar_funcion(funcion, asientos_disponibles_de(funcion_id)),
+        "entradas_anuladas": entradas_anuladas,
+        "compras_afectadas": compras_afectadas,
+        "total_a_reembolsar": total_a_reembolsar,
+    }
+
+
+def _compras_afectadas(funcion_id: int) -> list[dict]:
+    """Lista las compras aprobadas de la función con datos para reembolso."""
+    from app.models.compra import Compra
+    from app.models.cliente import Cliente
+    from app.models.enums import EstadoPago
+    from app.utils.serializadores import numero_compra
+
+    compras = (Compra.query
+               .filter_by(funcion_id=funcion_id,
+                          estado_pago=EstadoPago.APROBADO)
+               .order_by(Compra.id)
+               .all())
+    resultado = []
+    for compra in compras:
+        cliente = db.session.get(Cliente, compra.cliente_id)
+        cantidad = Entrada.query.filter_by(compra_id=compra.id).count()
+        resultado.append({
+            "compra_id": compra.id,
+            "numero": numero_compra(compra),
+            "cliente": {
+                "nombre": cliente.nombre if cliente else None,
+                "documento": cliente.documento if cliente else None,
+                "contacto": cliente.contacto if cliente else None,
+            },
+            "cantidad_entradas": cantidad,
+            "total": compra.total,
+            "metodo_pago": compra.metodo_pago,
+        })
+    return resultado
+
+
+def compras_afectadas_funcion(funcion_id: int) -> list[dict]:
+    """Expone la lista de compras afectadas (para el endpoint /afectados)."""
+    obtener_funcion(funcion_id)  # valida existencia (404 si no)
+    return _compras_afectadas(funcion_id)
 
 
 def eliminar_funcion(funcion_id: int, admin_id: int) -> None:

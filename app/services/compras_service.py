@@ -201,6 +201,11 @@ def comprar(datos: dict, usuario_id: int) -> tuple[dict, int]:
                     .with_for_update()
                     .all())
 
+        # Revalidar la función tras bloquear los asientos, leyéndola con FOR
+        # SHARE: nadie puede comprar mientras un administrador la cancela.
+        from app.services.reservas_service import _relectura_funcion_reservable
+        _relectura_funcion_reservable(funcion_id)
+
         encontrados = {a.id for a in asientos}
         faltantes = [i for i in ids_asientos if i not in encontrados]
         ajenos = [a.id for a in asientos if a.funcion_id != funcion_id]

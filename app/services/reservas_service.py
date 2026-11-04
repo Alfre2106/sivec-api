@@ -159,6 +159,24 @@ def _validar_funcion_reservable(funcion):
         )
 
 
+def _relectura_funcion_reservable(funcion_id):
+    """Relee la función con FOR SHARE y revalida que siga siendo reservable.
+
+    Se llama DESPUÉS de bloquear los asientos. El bloqueo compartido (FOR
+    SHARE) se serializa contra el FOR UPDATE que toma la cancelación: cierra la
+    ventana en la que alguien podría reservar/comprar mientras se cancela.
+    """
+    from app.models.funcion import Funcion
+    funcion = (Funcion.query
+               .filter_by(id=funcion_id)
+               .with_for_update(read=True)
+               .first())
+    if funcion is None:
+        db.session.rollback()
+        raise ErrorAPI("FUNCION_NO_ENCONTRADA", "La función no existe.", 404)
+    _validar_funcion_reservable(funcion)
+
+
 # --- Reservar -------------------------------------------------------------
 
 def reservar(datos: dict, usuario_id: int) -> dict:
@@ -186,6 +204,12 @@ def reservar(datos: dict, usuario_id: int) -> dict:
                     .order_by(AsientoFuncion.id)
                     .with_for_update()
                     .all())
+
+        # 1b) Revalidar la función DESPUÉS de bloquear los asientos, leyéndola
+        #     con FOR SHARE. Así, si un administrador la está cancelando (toma
+        #     FOR UPDATE sobre la función), esta operación espera y ve el estado
+        #     final: nadie reserva mientras se cancela.
+        _relectura_funcion_reservable(funcion_id)
 
         # Verificar que todos existen y pertenecen a la función.
         encontrados = {a.id for a in asientos}

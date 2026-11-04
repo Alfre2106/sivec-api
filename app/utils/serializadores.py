@@ -78,6 +78,7 @@ def serializar_compra(compra) -> dict:
             "id": compra.funcion_id,
             "pelicula": compra.funcion.pelicula.titulo if compra.funcion else None,
             "inicio": a_iso_bogota(compra.funcion.inicio) if compra.funcion else None,
+            "estado": estado_efectivo(compra.funcion).value if compra.funcion else None,
         },
         "total": compra.total,
         "metodo_pago": compra.metodo_pago,
