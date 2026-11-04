@@ -71,6 +71,8 @@ def _inicializar_extensiones(app: Flask) -> None:
         app,
         resources={r"/api/*": {"origins": app.config.get("CORS_ORIGENES", [])}},
         supports_credentials=True,
+        # Permite al frontend leer el nombre del archivo en las exportaciones CSV.
+        expose_headers=["Content-Disposition"],
     )
 
 
@@ -86,6 +88,7 @@ def _registrar_blueprints(app: Flask) -> None:
     from app.routes.compras import bp_compras
     from app.routes.entradas import bp_entradas
     from app.routes.validaciones import bp_validaciones
+    from app.routes.reportes import bp_reportes
 
     app.register_blueprint(bp_salud, url_prefix="/api")
     app.register_blueprint(bp_auth, url_prefix="/api")
@@ -97,8 +100,7 @@ def _registrar_blueprints(app: Flask) -> None:
     app.register_blueprint(bp_compras, url_prefix="/api")
     app.register_blueprint(bp_entradas, url_prefix="/api")
     app.register_blueprint(bp_validaciones, url_prefix="/api")
-    # En fases siguientes se registrarán aquí los demás blueprints
-    # (reportes, etc.).
+    app.register_blueprint(bp_reportes, url_prefix="/api")
 
 
 def _registrar_comandos(app: Flask) -> None:
