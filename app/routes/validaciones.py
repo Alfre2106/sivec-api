@@ -6,6 +6,7 @@ from app.services.validaciones_service import (
     validar_entrada, listar_validaciones,
 )
 from app.utils.autorizacion import rol_requerido, id_usuario_actual
+from app.utils.validaciones import obtener_cuerpo_json
 
 bp_validaciones = Blueprint("validaciones", __name__)
 
@@ -14,7 +15,7 @@ bp_validaciones = Blueprint("validaciones", __name__)
 @rol_requerido("taquillero", "administrador")
 def validar():
     """Valida un código de entrada. Responde 200 en todos los resultados."""
-    datos = request.get_json(silent=True) or {}
+    datos = obtener_cuerpo_json()
     resultado = validar_entrada(datos, taquillero_id=id_usuario_actual())
     return jsonify(resultado), 200
 

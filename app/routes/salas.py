@@ -7,6 +7,7 @@ from app.services.salas_service import (
 )
 from app.utils.autorizacion import rol_requerido, id_usuario_actual
 from app.utils.serializadores import serializar_sala
+from app.utils.validaciones import obtener_cuerpo_json
 
 bp_salas = Blueprint("salas", __name__)
 
@@ -31,7 +32,7 @@ def detalle(sala_id):
 @rol_requerido("administrador")
 def crear():
     """Administrador: crea una sala y calcula su capacidad."""
-    datos = request.get_json(silent=True) or {}
+    datos = obtener_cuerpo_json()
     sala = crear_sala(datos, admin_id=id_usuario_actual())
     return jsonify({"sala": serializar_sala(sala)}), 201
 
@@ -40,7 +41,7 @@ def crear():
 @rol_requerido("administrador")
 def editar(sala_id):
     """Administrador: edita una sala."""
-    datos = request.get_json(silent=True) or {}
+    datos = obtener_cuerpo_json()
     sala = editar_sala(sala_id, datos, admin_id=id_usuario_actual())
     return jsonify({"sala": serializar_sala(sala)}), 200
 

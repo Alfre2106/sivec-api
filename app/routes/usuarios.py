@@ -12,7 +12,7 @@ from app.services.usuarios_service import (
 )
 from app.utils.autorizacion import rol_requerido, id_usuario_actual
 from app.utils.serializadores import serializar_usuario
-from app.utils.validaciones import requerir_campos
+from app.utils.validaciones import requerir_campos, obtener_cuerpo_json
 
 bp_usuarios = Blueprint("usuarios", __name__)
 
@@ -32,7 +32,7 @@ def listar():
 @rol_requerido("administrador")
 def crear():
     """Crea un usuario taquillero o administrador."""
-    datos = request.get_json(silent=True) or {}
+    datos = obtener_cuerpo_json()
     requerir_campos(datos, ["nombre", "correo", "password", "rol"])
 
     usuario = crear_usuario(datos, admin_id=id_usuario_actual())
@@ -43,7 +43,7 @@ def crear():
 @rol_requerido("administrador")
 def editar(usuario_id):
     """Edita un usuario existente."""
-    datos = request.get_json(silent=True) or {}
+    datos = obtener_cuerpo_json()
     usuario = editar_usuario(usuario_id, datos, admin_id=id_usuario_actual())
     return jsonify({"usuario": serializar_usuario(usuario)}), 200
 

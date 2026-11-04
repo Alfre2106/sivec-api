@@ -1,4 +1,7 @@
-# === SIVEC API - Dependencias ===
+# === SIVEC API - Dependencias (todas con versión fijada) ===
+# Probado con Python 3.12 y PostgreSQL 17.
+
+# --- Dependencias directas ---
 # Framework web
 Flask==3.0.3
 
@@ -23,5 +26,28 @@ APScheduler==3.10.4
 # Generación de códigos QR
 qrcode[pil]==7.4.2
 
-# Pruebas
+# Pruebas (python -m pytest -v)
 pytest==8.3.3
+
+# --- Dependencias transitivas (fijadas para una instalación reproducible) ---
+alembic==1.20.1
+blinker==1.9.0
+click==8.5.0
+colorama==0.4.6
+iniconfig==2.3.1
+itsdangerous==2.2.0
+Jinja2==3.1.6
+Mako==1.4.3
+MarkupSafe==3.0.4
+packaging==26.3
+pillow==13.0.0
+pluggy==1.7.0
+PyJWT==2.15.1
+pypng==0.20220715.0
+pytz==2026.6
+six==1.17.0
+SQLAlchemy==2.1.6
+typing_extensions==4.16.0
+tzdata==2026.6
+tzlocal==5.4.5
+Werkzeug==3.1.9

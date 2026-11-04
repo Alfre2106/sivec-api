@@ -20,13 +20,20 @@ from app.services.auditoria_service import registrar_auditoria
 from app.utils.errores import ErrorAPI
 from app.utils.tiempo import ahora_utc, a_iso_bogota
 from app.utils.funciones_tiempo import hora_fin
+from app.utils.validaciones import validar_entero_en_rango, validar_id
+
+# Largo máximo del código guardado (columna validaciones.codigo_leido).
+LONGITUD_MAXIMA_CODIGO = 40
 
 
 def _normalizar_codigo(codigo) -> str:
     """Normaliza el código: sin espacios y en mayúsculas."""
     if not isinstance(codigo, str) or not codigo.strip():
         raise ErrorAPI("CODIGO_REQUERIDO", "El código es obligatorio.", 422)
-    return codigo.strip().upper()
+    # Un código real mide 16 caracteres. Si llega algo más largo que la columna
+    # (40), se recorta: seguirá siendo inexistente y el intento queda registrado
+    # en lugar de fallar al guardarlo.
+    return codigo.strip().upper()[:LONGITUD_MAXIMA_CODIGO]
 
 
 def _datos_funcion(funcion: Funcion) -> dict:
@@ -75,10 +82,8 @@ def validar_entrada(datos: dict, taquillero_id: int) -> dict:
     """
     codigo = _normalizar_codigo(datos.get("codigo"))
     funcion_id = datos.get("funcion_id")
-    if funcion_id is not None and (isinstance(funcion_id, bool)
-                                   or not isinstance(funcion_id, int)):
-        raise ErrorAPI("FUNCION_INVALIDA",
-                       "funcion_id debe ser un entero.", 422)
+    if funcion_id is not None:
+        funcion_id = validar_id(funcion_id, "funcion_id", "FUNCION_INVALIDA")
 
     ahora = ahora_utc()
 
@@ -233,12 +238,9 @@ def listar_validaciones(usuario_id, resultado=None, desde=None, hasta=None,
         consulta = consulta.filter(Validacion.fecha <= fin_utc)
 
     consulta = consulta.order_by(Validacion.fecha.desc())
-    if limite:
-        try:
-            consulta = consulta.limit(int(limite))
-        except (ValueError, TypeError):
-            raise ErrorAPI("LIMITE_INVALIDO",
-                           "El filtro 'limite' debe ser un entero.", 422)
+    if limite not in (None, ""):
+        consulta = consulta.limit(validar_entero_en_rango(
+            limite, "limite", 1, 1000, codigo="LIMITE_INVALIDO"))
 
     registros = consulta.all()
     resultado_lista = []

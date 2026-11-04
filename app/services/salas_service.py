@@ -10,7 +10,7 @@ from app.models.funcion import Funcion
 from app.models.enums import EstadoFuncion
 from app.services.auditoria_service import registrar_auditoria
 from app.utils.errores import ErrorAPI
-from app.utils.validaciones import validar_entero_en_rango
+from app.utils.validaciones import texto, validar_entero_en_rango
 
 
 def listar_salas() -> list[Sala]:
@@ -43,9 +43,7 @@ def _tiene_funciones(sala_id: int) -> bool:
 
 def crear_sala(datos: dict, admin_id: int) -> Sala:
     """Crea una sala y calcula su capacidad = filas * asientos_por_fila."""
-    nombre = (datos.get("nombre") or "").strip()
-    if not nombre:
-        raise ErrorAPI("CAMPOS_REQUERIDOS", "El nombre es obligatorio.", 422)
+    nombre = texto(datos.get("nombre"), "nombre", obligatorio=True, maximo=80)
 
     filas = validar_entero_en_rango(
         datos.get("filas"), "filas", 1, 26, codigo="FILAS_INVALIDAS")
@@ -92,7 +90,7 @@ def editar_sala(sala_id: int, datos: dict, admin_id: int) -> Sala:
         )
 
     if datos.get("nombre") is not None:
-        nombre = str(datos["nombre"]).strip()
+        nombre = texto(datos["nombre"], "nombre", maximo=80)
         if nombre:
             sala.nombre = nombre
             cambios["nombre"] = nombre

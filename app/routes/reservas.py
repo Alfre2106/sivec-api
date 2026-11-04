@@ -9,6 +9,7 @@ from app.services.reservas_service import (
 from app.utils.autorizacion import rol_requerido, id_usuario_actual
 from app.utils.errores import ErrorAPI
 from app.utils.tiempo import a_iso_bogota
+from app.utils.validaciones import obtener_cuerpo_json, validar_id
 
 bp_reservas = Blueprint("reservas", __name__)
 
@@ -17,7 +18,7 @@ bp_reservas = Blueprint("reservas", __name__)
 @rol_requerido("cliente", "taquillero")
 def crear():
     """Reserva uno o varios asientos de una función (cliente o taquillero)."""
-    datos = request.get_json(silent=True) or {}
+    datos = obtener_cuerpo_json()
     resultado = reservar(datos, usuario_id=id_usuario_actual())
     return jsonify({
         "reservas": resultado["reservas"],
@@ -42,11 +43,9 @@ def mias():
 @rol_requerido("cliente", "taquillero")
 def cancelar_todas_en_funcion():
     """Cancela todas mis reservas activas en una función (botón 'Volver')."""
-    datos = request.get_json(silent=True) or {}
-    funcion_id = datos.get("funcion_id")
-    if not isinstance(funcion_id, int) or isinstance(funcion_id, bool):
-        raise ErrorAPI("FUNCION_REQUERIDA",
-                       "funcion_id es obligatorio y debe ser entero.", 422)
+    datos = obtener_cuerpo_json()
+    funcion_id = validar_id(datos.get("funcion_id"), "funcion_id",
+                            "FUNCION_REQUERIDA")
     canceladas = cancelar_mis_reservas_en_funcion(
         funcion_id, id_usuario_actual())
     return jsonify({"canceladas": canceladas}), 200
@@ -58,3 +57,4 @@ def cancelar(reserva_id):
     """Cancela una reserva propia y activa."""
     cancelar_reserva(reserva_id, id_usuario_actual())
     return jsonify({"mensaje": "Reserva cancelada."}), 200
+

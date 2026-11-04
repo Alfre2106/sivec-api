@@ -9,7 +9,7 @@ from app.services.auth_service import registrar_cliente, iniciar_sesion
 from app.services.usuarios_service import obtener_usuario
 from app.utils.autorizacion import rol_requerido, id_usuario_actual
 from app.utils.serializadores import serializar_usuario
-from app.utils.validaciones import requerir_campos
+from app.utils.validaciones import requerir_campos, obtener_cuerpo_json
 
 bp_auth = Blueprint("auth", __name__)
 
@@ -17,7 +17,7 @@ bp_auth = Blueprint("auth", __name__)
 @bp_auth.post("/auth/registro")
 def registro():
     """Registro público: crea un usuario cliente y su ficha de cliente."""
-    datos = request.get_json(silent=True) or {}
+    datos = obtener_cuerpo_json()
     requerir_campos(datos, ["nombre", "correo", "password"])
 
     token, usuario = registrar_cliente(datos)
@@ -30,7 +30,7 @@ def registro():
 @bp_auth.post("/auth/login")
 def login():
     """Inicio de sesión: valida credenciales y devuelve token + usuario."""
-    datos = request.get_json(silent=True) or {}
+    datos = obtener_cuerpo_json()
     requerir_campos(datos, ["correo", "password"])
 
     token, usuario = iniciar_sesion(datos)

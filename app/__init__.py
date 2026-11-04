@@ -14,7 +14,10 @@ load_dotenv()
 
 from flask import Flask
 
-from app.config import obtener_configuracion
+from app.config import (
+    ConfiguracionProduccion, ConfiguracionPruebas, obtener_configuracion,
+    validar_secretos_produccion, validar_uri_pruebas,
+)
 from app.extensions import db, migrate, jwt, cors
 from app.utils.errores import (
     registrar_manejadores_errores, registrar_manejadores_jwt,
@@ -33,6 +36,19 @@ def create_app(nombre_entorno: str | None = None) -> Flask:
     # --- Configuración ---
     configuracion = obtener_configuracion(nombre_entorno)
     app.config.from_object(configuracion)
+
+    # Salvaguardas por entorno: las pruebas nunca tocan la base de trabajo y
+    # producción no arranca con claves de desarrollo.
+    if configuracion is ConfiguracionPruebas:
+        validar_uri_pruebas(app.config.get("SQLALCHEMY_DATABASE_URI"))
+    elif configuracion is ConfiguracionProduccion:
+        validar_secretos_produccion(app.config)
+    elif app.config.get("SECRET_KEY", "").startswith("clave-insegura") \
+            or app.config.get("JWT_SECRET_KEY", "").startswith("clave-jwt-insegura"):
+        # Desarrollo con las claves por defecto: funciona, pero se avisa.
+        app.logger.warning(
+            "Usando claves de desarrollo por defecto. Define SECRET_KEY y "
+            "JWT_SECRET_KEY en el .env (cadenas largas y aleatorias).")
 
     # --- Extensiones ---
     _inicializar_extensiones(app)

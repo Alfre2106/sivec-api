@@ -13,6 +13,7 @@ from app.utils.autorizacion import (
     rol_requerido, id_usuario_actual, rol_usuario_actual,
 )
 from app.utils.serializadores import serializar_funcion
+from app.utils.validaciones import obtener_cuerpo_json
 
 bp_funciones = Blueprint("funciones", __name__)
 
@@ -82,7 +83,7 @@ def asientos(funcion_id):
 @rol_requerido("administrador")
 def crear():
     """Administrador: crea una función y genera sus asientos."""
-    datos = request.get_json(silent=True) or {}
+    datos = obtener_cuerpo_json()
     funcion = crear_funcion(datos, admin_id=id_usuario_actual())
     disponibles = asientos_disponibles_de(funcion.id)
     return jsonify({"funcion": serializar_funcion(funcion, disponibles)}), 201
@@ -92,7 +93,7 @@ def crear():
 @rol_requerido("administrador")
 def editar(funcion_id):
     """Administrador: edita una función (reglas de ventas e inicio)."""
-    datos = request.get_json(silent=True) or {}
+    datos = obtener_cuerpo_json()
     funcion = editar_funcion(funcion_id, datos, admin_id=id_usuario_actual())
     disponibles = asientos_disponibles_de(funcion.id)
     return jsonify({"funcion": serializar_funcion(funcion, disponibles)}), 200
@@ -110,7 +111,7 @@ def eliminar(funcion_id):
 @rol_requerido("administrador")
 def cancelar(funcion_id):
     """Administrador: cancela la función y anula sus entradas activas."""
-    datos = request.get_json(silent=True) or {}
+    datos = obtener_cuerpo_json()
     resultado = cancelar_funcion(
         funcion_id, motivo=datos.get("motivo"), admin_id=id_usuario_actual())
     return jsonify(resultado), 200

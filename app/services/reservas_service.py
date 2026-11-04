@@ -19,6 +19,7 @@ from app.utils.errores import ErrorAPI
 from app.utils.funciones_tiempo import estado_efectivo, funcion_ya_inicio
 from app.models.enums import EstadoFuncion
 from app.utils.tiempo import ahora_utc
+from app.utils.validaciones import validar_id
 
 
 # --- Expiración perezosa (sin escribir) -----------------------------------
@@ -128,12 +129,7 @@ def _validar_lista_asientos(datos: dict) -> list[int]:
         raise ErrorAPI("ASIENTOS_REQUERIDOS",
                        "Debes indicar al menos un asiento.", 422)
 
-    ids = []
-    for valor in asientos:
-        if isinstance(valor, bool) or not isinstance(valor, int):
-            raise ErrorAPI("ASIENTO_INVALIDO",
-                           "Los ids de asiento deben ser enteros.", 422)
-        ids.append(valor)
+    ids = [validar_id(valor, "asientos", "ASIENTO_INVALIDO") for valor in asientos]
 
     if len(set(ids)) != len(ids):
         raise ErrorAPI("ASIENTOS_REPETIDOS",
@@ -167,8 +163,12 @@ def _relectura_funcion_reservable(funcion_id):
     ventana en la que alguien podría reservar/comprar mientras se cancela.
     """
     from app.models.funcion import Funcion
+    # populate_existing(): la función ya se cargó al inicio de la petición; sin
+    # esto SQLAlchemy conservaría el estado viejo en memoria aunque, tras
+    # esperar el bloqueo, la fila ya diga "cancelada".
     funcion = (Funcion.query
                .filter_by(id=funcion_id)
+               .populate_existing()
                .with_for_update(read=True)
                .first())
     if funcion is None:
@@ -186,10 +186,8 @@ def reservar(datos: dict, usuario_id: int) -> dict:
     expirar vencidas, verificar disponibilidad total (todo o nada) y crear las
     reservas. Devuelve el detalle para la respuesta 201.
     """
-    funcion_id = datos.get("funcion_id")
-    if not isinstance(funcion_id, int) or isinstance(funcion_id, bool):
-        raise ErrorAPI("FUNCION_REQUERIDA",
-                       "funcion_id es obligatorio y debe ser entero.", 422)
+    funcion_id = validar_id(datos.get("funcion_id"), "funcion_id",
+                            "FUNCION_REQUERIDA")
 
     ids_asientos = _validar_lista_asientos(datos)
 

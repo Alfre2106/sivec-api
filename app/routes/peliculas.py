@@ -8,6 +8,7 @@ from app.services.peliculas_service import (
 )
 from app.utils.autorizacion import rol_requerido, id_usuario_actual
 from app.utils.serializadores import serializar_pelicula
+from app.utils.validaciones import obtener_cuerpo_json
 
 bp_peliculas = Blueprint("peliculas", __name__)
 
@@ -32,7 +33,7 @@ def detalle(pelicula_id):
 @rol_requerido("administrador")
 def crear():
     """Administrador: crea una película."""
-    datos = request.get_json(silent=True) or {}
+    datos = obtener_cuerpo_json()
     pelicula = crear_pelicula(datos, admin_id=id_usuario_actual())
     return jsonify({"pelicula": serializar_pelicula(pelicula)}), 201
 
@@ -41,7 +42,7 @@ def crear():
 @rol_requerido("administrador")
 def editar(pelicula_id):
     """Administrador: edita una película."""
-    datos = request.get_json(silent=True) or {}
+    datos = obtener_cuerpo_json()
     pelicula = editar_pelicula(pelicula_id, datos, admin_id=id_usuario_actual())
     return jsonify({"pelicula": serializar_pelicula(pelicula)}), 200
 

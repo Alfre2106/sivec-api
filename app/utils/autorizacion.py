@@ -38,6 +38,10 @@ def rol_requerido(*roles_permitidos):
                     403,
                 )
             return funcion(*args, **kwargs)
+        # Metadato consultable: permite a las pruebas y a la documentación
+        # saber qué roles admite cada ruta sin leer el código de cada vista.
+        # Tupla vacía = cualquier usuario autenticado.
+        envoltura.roles_permitidos = tuple(roles_permitidos)
         return envoltura
     return decorador
 

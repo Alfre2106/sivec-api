@@ -13,7 +13,9 @@ from app.models.enums import RolUsuario
 from app.services.auditoria_service import registrar_auditoria
 from app.utils.errores import ErrorAPI
 from app.utils.seguridad import hashear_password, verificar_password
-from app.utils.validaciones import validar_correo, validar_password
+from app.utils.validaciones import (
+    LONGITUD_MAXIMA_CORREO, texto, validar_correo, validar_password,
+)
 
 
 def _emitir_token(usuario: Usuario) -> str:
@@ -36,7 +38,9 @@ def registrar_cliente(datos: dict) -> tuple[str, Usuario]:
     """
     correo = validar_correo(datos.get("correo"))
     password = validar_password(datos.get("password"))
-    nombre = (datos.get("nombre") or "").strip()
+    nombre = texto(datos.get("nombre"), "nombre", obligatorio=True, maximo=120)
+    documento = texto(datos.get("documento"), "documento", maximo=40)
+    contacto = texto(datos.get("contacto"), "contacto", maximo=120)
 
     # Correo único: segunda defensa además de la restricción UNIQUE en BD.
     if Usuario.query.filter_by(correo=correo).first():
@@ -57,8 +61,8 @@ def registrar_cliente(datos: dict) -> tuple[str, Usuario]:
     cliente = Cliente(
         usuario_id=usuario.id,
         nombre=nombre,
-        documento=(datos.get("documento") or None),
-        contacto=(datos.get("contacto") or None),
+        documento=documento,
+        contacto=contacto,
     )
     db.session.add(cliente)
 
@@ -82,8 +86,13 @@ def iniciar_sesion(datos: dict) -> tuple[str, Usuario]:
     contraseña es incorrecta, para no revelar qué correos están registrados.
     Un usuario inactivo no puede iniciar sesión.
     """
-    correo = (datos.get("correo") or "").strip().lower()
-    password = datos.get("password") or ""
+    correo = datos.get("correo")
+    password = datos.get("password")
+    if not isinstance(correo, str) or not isinstance(password, str):
+        raise ErrorAPI("CAMPO_INVALIDO",
+                       "El correo y la contraseña deben ser texto.", 422)
+    # Se recorta el correo para que un valor absurdo no llegue a la auditoría.
+    correo = correo.strip().lower()[:LONGITUD_MAXIMA_CORREO]
 
     usuario = Usuario.query.filter_by(correo=correo).first()
 

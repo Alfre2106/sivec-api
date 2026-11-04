@@ -5,6 +5,8 @@ asientos (`with_for_update()`), ordenadas por id. La concurrencia se resuelve
 siempre en la base de datos, nunca con locks de Python.
 """
 
+from datetime import timedelta
+
 from flask import current_app
 from sqlalchemy.exc import IntegrityError
 
@@ -24,6 +26,7 @@ from app.services.reservas_service import _validar_funcion_reservable
 from app.utils.codigos import generar_codigo_entrada
 from app.utils.errores import ErrorAPI
 from app.utils.tiempo import ahora_utc
+from app.utils.validaciones import texto, validar_id
 
 # Métodos de pago permitidos por rol.
 METODOS_POR_ROL = {
@@ -55,8 +58,14 @@ def _resolver_cliente(usuario: Usuario, datos: dict) -> Cliente:
         return cliente
 
     # Taquillero: datos del cliente obligatorios.
-    datos_cliente = datos.get("cliente") or {}
-    nombre = (datos_cliente.get("nombre") or "").strip()
+    datos_cliente = datos.get("cliente")
+    if datos_cliente is None:
+        datos_cliente = {}
+    if not isinstance(datos_cliente, dict):
+        raise ErrorAPI("CLIENTE_INVALIDO",
+                       "El campo 'cliente' debe ser un objeto con los datos "
+                       "del cliente.", 422)
+    nombre = texto(datos_cliente.get("nombre"), "cliente.nombre", maximo=120)
     if not nombre:
         raise ErrorAPI(
             "CLIENTE_REQUERIDO",
@@ -67,8 +76,10 @@ def _resolver_cliente(usuario: Usuario, datos: dict) -> Cliente:
     cliente = Cliente(
         usuario_id=None,  # venta en taquilla: cliente sin cuenta
         nombre=nombre,
-        documento=(datos_cliente.get("documento") or None),
-        contacto=(datos_cliente.get("contacto") or None),
+        documento=texto(datos_cliente.get("documento"), "cliente.documento",
+                        maximo=40),
+        contacto=texto(datos_cliente.get("contacto"), "cliente.contacto",
+                       maximo=120),
     )
     db.session.add(cliente)
     db.session.flush()
@@ -77,7 +88,7 @@ def _resolver_cliente(usuario: Usuario, datos: dict) -> Cliente:
 
 def _validar_metodo_pago(usuario: Usuario, metodo: str) -> str:
     """Valida el método de pago según el rol."""
-    metodo = (metodo or "").strip().lower()
+    metodo = (texto(metodo, "metodo_pago", maximo=40) or "").lower()
     permitidos = METODOS_POR_ROL.get(usuario.rol, set())
     if metodo not in permitidos:
         raise ErrorAPI(
@@ -101,12 +112,8 @@ def _resolver_asientos_objetivo(funcion_id, datos, usuario_id):
         if not isinstance(asientos, list) or len(asientos) == 0:
             raise ErrorAPI("ASIENTOS_REQUERIDOS",
                            "Debes indicar al menos un asiento.", 422)
-        ids = []
-        for valor in asientos:
-            if isinstance(valor, bool) or not isinstance(valor, int):
-                raise ErrorAPI("ASIENTO_INVALIDO",
-                               "Los ids de asiento deben ser enteros.", 422)
-            ids.append(valor)
+        ids = [validar_id(valor, "asientos", "ASIENTO_INVALIDO")
+               for valor in asientos]
         if len(set(ids)) != len(ids):
             raise ErrorAPI("ASIENTOS_REPETIDOS",
                            "Hay asientos repetidos en la solicitud.", 422)
@@ -174,13 +181,12 @@ def comprar(datos: dict, usuario_id: int) -> tuple[dict, int]:
     """
     usuario = db.session.get(Usuario, usuario_id)
 
-    funcion_id = datos.get("funcion_id")
-    if not isinstance(funcion_id, int) or isinstance(funcion_id, bool):
-        raise ErrorAPI("FUNCION_REQUERIDA",
-                       "funcion_id es obligatorio y debe ser entero.", 422)
+    funcion_id = validar_id(datos.get("funcion_id"), "funcion_id",
+                            "FUNCION_REQUERIDA")
 
     metodo_pago = _validar_metodo_pago(usuario, datos.get("metodo_pago"))
-    resultado = (datos.get("resultado_simulado") or "aprobado").strip().lower()
+    resultado = (texto(datos.get("resultado_simulado"), "resultado_simulado",
+                       maximo=20) or "aprobado").lower()
     if resultado not in ("aprobado", "rechazado"):
         raise ErrorAPI(
             "RESULTADO_INVALIDO",
@@ -225,7 +231,8 @@ def comprar(datos: dict, usuario_id: int) -> tuple[dict, int]:
         # Validar/ajustar el estado de cada asiento (RN-04).
         no_disponibles = []
         reservas_vencidas = []
-        reservas_a_convertir = []
+        reservas_a_convertir = []   # reservas vigentes del propio usuario
+        por_reservar = []           # asientos libres: se reservan primero
 
         for asiento in asientos:
             if asiento.estado == EstadoAsiento.VENDIDO:
@@ -233,25 +240,31 @@ def comprar(datos: dict, usuario_id: int) -> tuple[dict, int]:
                 continue
 
             if asiento.estado == EstadoAsiento.DISPONIBLE:
-                # Se reserva primero dentro de la misma transacción.
+                por_reservar.append(asiento)
                 continue
 
-            if asiento.estado == EstadoAsiento.RESERVADO:
-                # Debe ser una reserva del mismo usuario y vigente.
-                reserva = (Reserva.query
-                           .filter_by(asiento_id=asiento.id,
-                                      estado=EstadoReserva.ACTIVA)
-                           .order_by(Reserva.id.desc())
-                           .first())
-                if reserva is None:
-                    # Reservado sin reserva activa: estado inconsistente -> no disp.
-                    no_disponibles.append(asiento.id)
-                elif reserva.usuario_id != usuario_id:
-                    no_disponibles.append(asiento.id)
-                elif reserva.vence_en < ahora:
-                    reservas_vencidas.append(asiento.id)
+            # Asiento RESERVADO: mirar quién lo reservó y si sigue vigente.
+            reserva = (Reserva.query
+                       .filter_by(asiento_id=asiento.id,
+                                  estado=EstadoReserva.ACTIVA)
+                       .order_by(Reserva.id.desc())
+                       .first())
+            if reserva is None:
+                # Reservado sin reserva activa: estado inconsistente.
+                no_disponibles.append(asiento.id)
+            elif reserva.usuario_id == usuario_id:
+                if reserva.vence_en < ahora:
+                    reservas_vencidas.append(asiento.id)      # RN-04
                 else:
                     reservas_a_convertir.append(reserva)
+            elif reserva.vence_en < ahora:
+                # Vencida de OTRO usuario (el job aún no la expiró): se expira
+                # aquí, en la misma transacción, y el asiento queda libre.
+                reserva.estado = EstadoReserva.EXPIRADA
+                asiento.estado = EstadoAsiento.DISPONIBLE
+                por_reservar.append(asiento)
+            else:
+                no_disponibles.append(asiento.id)
 
         if reservas_vencidas:
             db.session.rollback()
@@ -269,6 +282,22 @@ def comprar(datos: dict, usuario_id: int) -> tuple[dict, int]:
                 409,
                 detalle={"asientos_no_disponibles": sorted(no_disponibles)},
             )
+
+        # Los asientos libres se reservan primero, dentro de esta transacción.
+        # Así, si el pago se rechaza, quedan reservados hasta vencer (RN-13);
+        # si se aprueba, esas reservas se convierten en la venta.
+        if por_reservar:
+            vence_nueva = ahora + timedelta(
+                minutes=current_app.config["RESERVA_DURACION_MINUTOS"])
+            for asiento in por_reservar:
+                asiento.estado = EstadoAsiento.RESERVADO
+                reserva_nueva = Reserva(
+                    asiento_id=asiento.id, usuario_id=usuario_id,
+                    reservado_en=ahora, vence_en=vence_nueva,
+                    estado=EstadoReserva.ACTIVA)
+                db.session.add(reserva_nueva)
+                reservas_a_convertir.append(reserva_nueva)
+            db.session.flush()
 
         total = funcion.precio * len(asientos)
 
@@ -294,9 +323,9 @@ def _procesar_rechazo(cliente, usuario, funcion, asientos, metodo_pago, total,
                       reservas_a_convertir, usuario_id):
     """Guarda una compra rechazada sin emitir entradas (RN-13).
 
-    Los asientos que ya estaban reservados por el usuario siguen reservados con
-    su vence_en. Los asientos que estaban disponibles NO se reservan (no hubo
-    pago), por lo que se deja todo como estaba. Devuelve 402.
+    Todos los asientos quedan reservados con su vence_en: los que el usuario ya
+    tenía reservados y los que estaban libres (se reservaron primero en esta
+    misma transacción). Así puede reintentar el pago hasta que venza. Devuelve 402.
     """
     compra = Compra(
         cliente_id=cliente.id,
@@ -398,22 +427,50 @@ def listar_mis_compras(usuario_id: int) -> list[dict]:
     if cliente is None:
         return []
 
-    compras = (Compra.query
-               .filter_by(cliente_id=cliente.id,
-                          estado_pago=EstadoPago.APROBADO)
+    compras = (_consulta_con_funcion()
+               .filter(Compra.cliente_id == cliente.id,
+                       Compra.estado_pago == EstadoPago.APROBADO)
                .order_by(Compra.creado_en.desc())
                .all())
 
+    entradas, asientos = _entradas_por_compra([c.id for c in compras])
     resultado = []
     for compra in compras:
         datos = serializar_compra(compra)
-        datos["entradas"] = [
-            serializar_entrada(e) for e in
-            Entrada.query.filter_by(compra_id=compra.id)
-            .order_by(Entrada.id).all()
-        ]
+        datos["entradas"] = [serializar_entrada(e, asientos=asientos)
+                             for e in entradas.get(compra.id, [])]
         resultado.append(datos)
     return resultado
+
+
+def _consulta_con_funcion():
+    """Consulta de compras que trae la función y su película en el mismo SELECT."""
+    from sqlalchemy.orm import joinedload
+    from app.models.funcion import Funcion
+    return Compra.query.options(
+        joinedload(Compra.funcion).joinedload(Funcion.pelicula))
+
+
+def _entradas_por_compra(compra_ids: list[int]):
+    """Carga las entradas de muchas compras en UNA consulta (evita N+1).
+
+    Devuelve (entradas_por_compra, asientos_por_id): las entradas agrupadas por
+    compra y los asientos de todas ellas (otra consulta), listos para pasarse
+    a `serializar_entrada`.
+    """
+    if not compra_ids:
+        return {}, {}
+    entradas = (Entrada.query
+                .filter(Entrada.compra_id.in_(compra_ids))
+                .order_by(Entrada.id)
+                .all())
+    asiento_ids = {e.asiento_id for e in entradas}
+    asientos = {a.id: a for a in AsientoFuncion.query
+                .filter(AsientoFuncion.id.in_(asiento_ids)).all()} if asiento_ids else {}
+    agrupadas: dict[int, list[Entrada]] = {}
+    for entrada in entradas:
+        agrupadas.setdefault(entrada.compra_id, []).append(entrada)
+    return agrupadas, asientos
 
 
 def listar_ventas(usuario_id: int, desde=None, hasta=None) -> list[dict]:
@@ -428,7 +485,8 @@ def listar_ventas(usuario_id: int, desde=None, hasta=None) -> list[dict]:
     from app.utils.tiempo import parsear_dia_bogota
 
     usuario = db.session.get(Usuario, usuario_id)
-    consulta = Compra.query.filter_by(estado_pago=EstadoPago.APROBADO)
+    consulta = _consulta_con_funcion().filter(
+        Compra.estado_pago == EstadoPago.APROBADO)
 
     # Taquillero: solo lo suyo. Administrador: todo.
     if usuario.rol == RolUsuario.TAQUILLERO:
@@ -443,20 +501,22 @@ def listar_ventas(usuario_id: int, desde=None, hasta=None) -> list[dict]:
 
     compras = consulta.order_by(Compra.creado_en.desc()).all()
 
+    # Clientes y entradas de todas las compras, en una consulta cada uno.
+    clientes = {c.id: c for c in Cliente.query.filter(
+        Cliente.id.in_({c.cliente_id for c in compras})).all()} if compras else {}
+    entradas, asientos = _entradas_por_compra([c.id for c in compras])
+
     resultado = []
     for compra in compras:
         datos = serializar_compra(compra)
-        cliente = db.session.get(Cliente, compra.cliente_id)
+        cliente = clientes.get(compra.cliente_id)
         datos["cliente"] = {
             "id": cliente.id if cliente else None,
             "nombre": cliente.nombre if cliente else None,
             "documento": cliente.documento if cliente else None,
             "contacto": cliente.contacto if cliente else None,
         }
-        datos["entradas"] = [
-            serializar_entrada(e) for e in
-            Entrada.query.filter_by(compra_id=compra.id)
-            .order_by(Entrada.id).all()
-        ]
+        datos["entradas"] = [serializar_entrada(e, asientos=asientos)
+                             for e in entradas.get(compra.id, [])]
         resultado.append(datos)
     return resultado

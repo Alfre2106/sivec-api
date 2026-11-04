@@ -10,7 +10,9 @@ from app.models.enums import RolUsuario
 from app.services.auditoria_service import registrar_auditoria
 from app.utils.errores import ErrorAPI
 from app.utils.seguridad import hashear_password
-from app.utils.validaciones import validar_correo, validar_password
+from app.utils.validaciones import (
+    booleano, texto, validar_correo, validar_password,
+)
 
 # Roles que un administrador puede crear por este medio.
 ROLES_CREABLES = {RolUsuario.TAQUILLERO.value, RolUsuario.ADMINISTRADOR.value}
@@ -49,12 +51,8 @@ def crear_usuario(datos: dict, admin_id: int) -> Usuario:
     """
     correo = validar_correo(datos.get("correo"))
     password = validar_password(datos.get("password"))
-    nombre = (datos.get("nombre") or "").strip()
-    rol_texto = (datos.get("rol") or "").strip()
-
-    if not nombre:
-        raise ErrorAPI("CAMPOS_REQUERIDOS",
-                       "Faltan campos obligatorios: nombre.", 422)
+    nombre = texto(datos.get("nombre"), "nombre", obligatorio=True, maximo=120)
+    rol_texto = texto(datos.get("rol"), "rol", obligatorio=True, maximo=30)
 
     rol = _parsear_rol(rol_texto)
     if rol.value not in ROLES_CREABLES:
@@ -95,7 +93,7 @@ def editar_usuario(usuario_id: int, datos: dict, admin_id: int) -> Usuario:
     cambios = {}
 
     if "nombre" in datos and datos["nombre"] is not None:
-        nombre = str(datos["nombre"]).strip()
+        nombre = texto(datos["nombre"], "nombre", maximo=120)
         if nombre:
             usuario.nombre = nombre
             cambios["nombre"] = nombre
@@ -111,7 +109,7 @@ def editar_usuario(usuario_id: int, datos: dict, admin_id: int) -> Usuario:
         cambios["correo"] = nuevo_correo
 
     if "rol" in datos and datos["rol"] is not None:
-        rol = _parsear_rol(str(datos["rol"]))
+        rol = _parsear_rol(texto(datos["rol"], "rol", obligatorio=True, maximo=30))
         usuario.rol = rol
         cambios["rol"] = rol.value
 
@@ -121,7 +119,7 @@ def editar_usuario(usuario_id: int, datos: dict, admin_id: int) -> Usuario:
         cambios["password"] = "actualizada"  # nunca guardamos el valor real
 
     if "activo" in datos and datos["activo"] is not None:
-        usuario.activo = bool(datos["activo"])
+        usuario.activo = booleano(datos["activo"], "activo")
         cambios["activo"] = usuario.activo
 
     registrar_auditoria(

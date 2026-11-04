@@ -87,8 +87,13 @@ def serializar_compra(compra) -> dict:
     }
 
 
-def serializar_entrada(entrada, con_asiento=True) -> dict:
-    """Serializa una entrada. Incluye fila/numero del asiento si se pide."""
+def serializar_entrada(entrada, con_asiento=True, asientos=None) -> dict:
+    """Serializa una entrada. Incluye fila/numero del asiento si se pide.
+
+    `asientos` es un diccionario {asiento_id: AsientoFuncion} ya cargado. Al
+    serializar muchas entradas conviene pasarlo para no hacer una consulta por
+    cada una (patrón N+1); si no se pasa, se consulta el asiento.
+    """
     datos = {
         "id": entrada.id,
         "codigo": entrada.codigo,
@@ -98,7 +103,10 @@ def serializar_entrada(entrada, con_asiento=True) -> dict:
     if con_asiento:
         from app.models.asiento_funcion import AsientoFuncion
         from app.extensions import db
-        asiento = db.session.get(AsientoFuncion, entrada.asiento_id)
+        if asientos is not None:
+            asiento = asientos.get(entrada.asiento_id)
+        else:
+            asiento = db.session.get(AsientoFuncion, entrada.asiento_id)
         datos["fila"] = asiento.fila if asiento else None
         datos["numero"] = asiento.numero if asiento else None
     return datos

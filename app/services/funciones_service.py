@@ -27,9 +27,24 @@ from app.services.salas_service import obtener_sala
 from app.utils.errores import ErrorAPI
 from app.utils.funciones_tiempo import funcion_ya_inicio
 from app.utils.tiempo import ahora_utc, parsear_iso_a_utc, parsear_dia_bogota
+from app.utils.validaciones import texto, validar_id
 
 # Margen de limpieza entre funciones de una misma sala (minutos).
 MARGEN_MINUTOS = 15
+
+# Precio máximo por entrada (COP). Con una sala de hasta 780 asientos, el total
+# de una compra (precio × cantidad) sigue cabiendo en una columna integer.
+PRECIO_MAXIMO = 1_000_000
+
+
+def _validar_precio(precio) -> int:
+    """El precio debe ser un entero entre 1 y PRECIO_MAXIMO (COP)."""
+    if (isinstance(precio, bool) or not isinstance(precio, int)
+            or precio < 1 or precio > PRECIO_MAXIMO):
+        raise ErrorAPI(
+            "PRECIO_INVALIDO",
+            f"El precio debe ser un entero entre 1 y {PRECIO_MAXIMO}.", 422)
+    return precio
 
 
 # --- Consulta de asientos disponibles (agregada, sin N+1) -----------------
@@ -223,10 +238,9 @@ def crear_funcion(datos: dict, admin_id: int) -> Funcion:
     """
     # La película debe existir y estar activa (no se crean funciones de
     # películas desactivadas).
-    pelicula = obtener_pelicula(datos.get("pelicula_id"), solo_activa=False) \
-        if datos.get("pelicula_id") is not None else None
-    if pelicula is None:
+    if datos.get("pelicula_id") is None:
         raise ErrorAPI("CAMPOS_REQUERIDOS", "pelicula_id es obligatorio.", 422)
+    pelicula = obtener_pelicula(validar_id(datos["pelicula_id"], "pelicula_id"))
     if not pelicula.activa:
         raise ErrorAPI("PELICULA_INACTIVA",
                        "No se pueden crear funciones de una película "
@@ -234,17 +248,14 @@ def crear_funcion(datos: dict, admin_id: int) -> Funcion:
 
     if datos.get("sala_id") is None:
         raise ErrorAPI("CAMPOS_REQUERIDOS", "sala_id es obligatorio.", 422)
-    sala = obtener_sala(datos["sala_id"])
+    sala = obtener_sala(validar_id(datos["sala_id"], "sala_id"))
 
     inicio_utc = parsear_iso_a_utc(datos.get("inicio"))
     if inicio_utc <= ahora_utc():
         raise ErrorAPI("INICIO_NO_FUTURO",
                        "La hora de inicio debe ser futura.", 422)
 
-    precio = datos.get("precio")
-    if isinstance(precio, bool) or not isinstance(precio, int) or precio <= 0:
-        raise ErrorAPI("PRECIO_INVALIDO",
-                       "El precio debe ser un entero mayor que 0.", 422)
+    precio = _validar_precio(datos.get("precio"))
 
     # Sin solapamiento con otras funciones activas de la misma sala.
     _validar_no_solapamiento(sala.id, inicio_utc, pelicula.duracion_min)
@@ -318,10 +329,7 @@ def editar_funcion(funcion_id: int, datos: dict, admin_id: int) -> Funcion:
 
     # Cambio de precio (siempre permitido mientras no esté cancelada/iniciada).
     if datos.get("precio") is not None:
-        precio = datos["precio"]
-        if isinstance(precio, bool) or not isinstance(precio, int) or precio <= 0:
-            raise ErrorAPI("PRECIO_INVALIDO",
-                           "El precio debe ser un entero mayor que 0.", 422)
+        precio = _validar_precio(datos["precio"])
         funcion.precio = precio
         cambios["precio"] = precio
 
@@ -343,7 +351,8 @@ def _editar_estructura(funcion: Funcion, datos: dict, cambios: dict) -> Funcion:
     """
     nueva_pelicula = funcion.pelicula
     if datos.get("pelicula_id") is not None:
-        nueva_pelicula = obtener_pelicula(datos["pelicula_id"])
+        nueva_pelicula = obtener_pelicula(
+            validar_id(datos["pelicula_id"], "pelicula_id"))
         if not nueva_pelicula.activa:
             raise ErrorAPI("PELICULA_INACTIVA",
                            "La película está desactivada.", 409)
@@ -353,7 +362,7 @@ def _editar_estructura(funcion: Funcion, datos: dict, cambios: dict) -> Funcion:
     nueva_sala = funcion.sala
     cambia_sala = datos.get("sala_id") is not None
     if cambia_sala:
-        nueva_sala = obtener_sala(datos["sala_id"])
+        nueva_sala = obtener_sala(validar_id(datos["sala_id"], "sala_id"))
         cambios["sala_id"] = nueva_sala.id
 
     nuevo_inicio = funcion.inicio
@@ -394,7 +403,7 @@ def cancelar_funcion(funcion_id: int, motivo: str, admin_id: int) -> dict:
     from app.utils.funciones_tiempo import estado_efectivo
     from app.utils.serializadores import serializar_funcion, numero_compra
 
-    motivo = (motivo or "").strip()
+    motivo = texto(motivo, "motivo", maximo=500)
     if not motivo:
         raise ErrorAPI("MOTIVO_REQUERIDO",
                        "El motivo de la cancelación es obligatorio.", 422)

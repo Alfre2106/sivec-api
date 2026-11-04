@@ -46,14 +46,15 @@ def parsear_iso_a_utc(texto: str) -> datetime:
     try:
         # fromisoformat acepta "2026-11-05T20:00:00" y "...+00:00"/"...-05:00".
         fecha = datetime.fromisoformat(texto.strip())
-    except ValueError:
+        # OverflowError: fechas extremas (p. ej. año 9999) al cambiar de zona.
+        return a_utc(fecha)
+    except (ValueError, OverflowError):
         raise ErrorAPI(
             "FECHA_INVALIDA",
             "El formato de la fecha no es válido. Usa ISO 8601, "
             "por ejemplo 2026-11-05T20:00:00.",
             422,
         )
-    return a_utc(fecha)
 
 
 def parsear_dia_bogota(texto: str) -> tuple[datetime, datetime]:
@@ -71,7 +72,13 @@ def parsear_dia_bogota(texto: str) -> tuple[datetime, datetime]:
 
     inicio_local = datetime.combine(dia, time.min, tzinfo=ZONA_BOGOTA)
     fin_local = datetime.combine(dia, time.max, tzinfo=ZONA_BOGOTA)
-    return inicio_local.astimezone(timezone.utc), fin_local.astimezone(timezone.utc)
+    try:
+        return (inicio_local.astimezone(timezone.utc),
+                fin_local.astimezone(timezone.utc))
+    except OverflowError:       # fechas extremas (p. ej. 9999-12-31)
+        raise ErrorAPI(
+            "FECHA_INVALIDA",
+            "La fecha está fuera del rango permitido.", 422)
 
 
 def a_iso_bogota(fecha: datetime | None) -> str | None:

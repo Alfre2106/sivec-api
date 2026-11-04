@@ -6,6 +6,7 @@ from app.services.compras_service import (
     comprar, listar_mis_compras, listar_ventas,
 )
 from app.utils.autorizacion import rol_requerido, id_usuario_actual
+from app.utils.validaciones import obtener_cuerpo_json
 
 bp_compras = Blueprint("compras", __name__)
 
@@ -14,7 +15,7 @@ bp_compras = Blueprint("compras", __name__)
 @rol_requerido("cliente", "taquillero")
 def crear():
     """Confirma una compra y simula el pago (cliente o taquillero)."""
-    datos = request.get_json(silent=True) or {}
+    datos = obtener_cuerpo_json()
     cuerpo, status = comprar(datos, usuario_id=id_usuario_actual())
     return jsonify(cuerpo), status
 
