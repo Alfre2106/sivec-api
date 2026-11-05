@@ -121,14 +121,14 @@ ERR_SIN_TOKEN = ("Sin token", 401, err(
 ERR_ROL = ("Rol incorrecto", 403, err(
     "ROL_NO_AUTORIZADO", "No tienes permisos para realizar esta acción."))
 FUNCION_EJEMPLO = {
-    "id": 1, "pelicula": {"id": 1, "titulo": "Intensa-Mente 2", "poster_url": "/posters/intensa-mente-2.jpg",
-                          "duracion_min": 96, "clasificacion": "A", "genero": "Animación"},
+    "id": 1, "pelicula": {"id": 1, "titulo": "Intensa-Mente 2", "poster_url": "/posters/intensamente-2.jpg",
+                          "duracion_min": 96, "clasificacion": "Todo público", "genero": "Animación"},
     "sala": {"id": 1, "nombre": "Sala 1"}, "inicio": "2026-11-05T20:00:00-05:00",
     "fin": "2026-11-05T21:36:00-05:00", "precio": 20000, "estado": "activa",
     "capacidad": 72, "asientos_disponibles": 72}
-PELICULA_EJEMPLO = {"id": 1, "titulo": "Intensa-Mente 2", "genero": "Animación", "clasificacion": "A",
+PELICULA_EJEMPLO = {"id": 1, "titulo": "Intensa-Mente 2", "genero": "Animación", "clasificacion": "Todo público",
                     "duracion_min": 96, "sinopsis": "Las emociones de Riley.",
-                    "poster_url": "/posters/intensa-mente-2.jpg", "activa": True}
+                    "poster_url": "/posters/intensamente-2.jpg", "activa": True}
 SALA_EJEMPLO = {"id": 1, "nombre": "Sala 1", "filas": 6, "asientos_por_fila": 12, "capacidad": 72}
 USUARIO_EJEMPLO = {"id": 6, "nombre": "Carlos Taquilla", "correo": "carlos@sivec.com",
                    "rol": "taquillero", "activo": True, "cliente_id": None,
@@ -427,15 +427,19 @@ def administrador():
 
         # --- Películas ---
         R("Películas — crear", "POST", "/peliculas",
-          cuerpo=json.dumps({"titulo": "Moana 2", "genero": "Animación", "clasificacion": "A",
+          cuerpo=json.dumps({"titulo": "Moana 2", "genero": "Animación", "clasificacion": "Todo público",
                              "duracion_min": 100, "sinopsis": "Moana vuelve al océano.",
-                             "poster_url": "/posters/moana-2.jpg"}, indent=2, ensure_ascii=False),
+                             "poster_url": "/posters/moana.jpg"}, indent=2, ensure_ascii=False),
           descripcion="Guarda `pelicula_nueva_id`.",
           test=comprobar(201) + '\nconst r = pm.response.json();\n'
                + guardar(("pelicula_nueva_id", "r.pelicula.id")),
           ejemplos=[("Éxito", 201, {"pelicula": {**PELICULA_EJEMPLO, "id": 8, "titulo": "Moana 2"}}),
                     ("Duración inválida", 422, err(
                         "DURACION_INVALIDA", "El campo 'duracion_min' debe estar entre 1 y 600.")),
+                    ("Clasificación no permitida", 422, err(
+                        "CLASIFICACION_INVALIDA",
+                        "La clasificación no es válida. Valores permitidos: Todo público, Mayores de 7, "
+                        "Mayores de 12, Mayores de 15, Mayores de 18.")),
                     ERR_ROL]),
         R("Películas — editar", "PUT", "/peliculas/{{pelicula_nueva_id}}",
           cuerpo='{\n  "genero": "Aventura"\n}', test=comprobar(200),

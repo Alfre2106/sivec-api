@@ -144,7 +144,10 @@ elimina el usuario, la ficha se conserva (`ON DELETE SET NULL`).
 ### `peliculas`
 Catálogo. `activa = false` equivale a "desactivada": no sale en la cartelera, no admite
 funciones nuevas y sus funciones no se listan públicamente. Nunca se borran por la API.
-`duracion_min` (1 a 600) define la hora de fin de cada función.
+`duracion_min` (1 a 600) define la hora de fin de cada función. `clasificacion` es texto legible y la API solo
+acepta `Todo público`, `Mayores de 7`, `Mayores de 12`, `Mayores de 15` o `Mayores de 18` (la columna sigue siendo
+`varchar(20)`; la validación está en la API, no en la base). `poster_url` es la ruta del póster en el frontend
+(`/posters/<archivo>`).
 
 ### `salas`
 Distribución física: `filas` (1 a 26, letras A-Z) × `asientos_por_fila` (1 a 30).

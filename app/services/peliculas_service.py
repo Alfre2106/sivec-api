@@ -30,8 +30,17 @@ def obtener_pelicula(pelicula_id: int, solo_activa: bool = False) -> Pelicula:
     return pelicula
 
 
+# Únicos valores aceptados en `clasificacion` (texto legible para el público).
+CLASIFICACIONES_PERMITIDAS = (
+    "Todo público",
+    "Mayores de 7",
+    "Mayores de 12",
+    "Mayores de 15",
+    "Mayores de 18",
+)
+
 # Longitud máxima de cada campo de texto (coincide con las columnas de la tabla).
-LIMITES_TEXTO = {"genero": 80, "clasificacion": 20, "sinopsis": 5000}
+LIMITES_TEXTO = {"genero": 80, "sinopsis": 5000}
 
 
 def _limpiar_datos_pelicula(datos: dict, creando: bool) -> dict:
@@ -50,6 +59,19 @@ def _limpiar_datos_pelicula(datos: dict, creando: bool) -> dict:
         if datos.get(campo) is not None:
             # Un texto vacío ("") vacía el campo (queda en None).
             limpio[campo] = texto(datos[campo], campo, maximo=maximo)
+
+    # La clasificación solo admite los valores de CLASIFICACIONES_PERMITIDAS
+    # (coincidencia exacta; "" tampoco es válido).
+    if datos.get("clasificacion") is not None:
+        valor = datos["clasificacion"]
+        if not isinstance(valor, str) or valor not in CLASIFICACIONES_PERMITIDAS:
+            raise ErrorAPI(
+                "CLASIFICACION_INVALIDA",
+                "La clasificación no es válida. Valores permitidos: "
+                + ", ".join(CLASIFICACIONES_PERMITIDAS) + ".",
+                422,
+            )
+        limpio["clasificacion"] = valor
 
     # poster_url es texto (ruta o URL).
     if datos.get("poster_url") is not None:

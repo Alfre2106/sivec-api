@@ -80,7 +80,7 @@ def _cuerpos_validos(esc):
             "nombre": "Nuevo", "correo": "n@x.com", "rol": "cliente",
             "password": "654321", "activo": True}),
         ("POST", "/api/peliculas", "admin", {
-            "titulo": "Peli", "genero": "Drama", "clasificacion": "B",
+            "titulo": "Peli", "genero": "Drama", "clasificacion": "Mayores de 12",
             "duracion_min": 90, "sinopsis": "s", "poster_url": "/p.jpg", "activa": True}),
         ("PUT", "/api/peliculas/1", "admin", {
             "titulo": "Otra", "genero": "g", "duracion_min": 100, "activa": True}),

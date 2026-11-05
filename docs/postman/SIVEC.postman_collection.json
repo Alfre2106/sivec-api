@@ -1,6 +1,6 @@
 {
   "info": {
-    "_postman_id": "893cc8b0-ea8f-42dd-a94b-b276b22a2c62",
+    "_postman_id": "344ae46f-be9d-4109-961b-5113fb003856",
     "name": "SIVEC API",
     "description": "API REST de SIVEC (Sistema de Venta de Entradas). Documentación completa en docs/API.md.\n\nCÓMO USARLA\n1. Importa esta colección y el entorno «SIVEC Local», y selecciona el entorno (arriba a la derecha).\n2. Arranca la API (python run.py) y carga los datos de prueba (flask seed).\n3. Dentro de cada carpeta de rol, ejecuta primero su request «Login …»: guarda el token en {{token}}.\n   Para cambiar de rol, ejecuta el login de otra carpeta.\n4. Usuarios del seed (clave 123456): cliente@sivec.com, taquillero@sivec.com, admin@sivec.com.\n5. Los requests guardan ids útiles en el entorno (funcion_id, asiento_id, entrada_id, codigo_entrada...).\n   Puedes ejecutarlos en orden con «Run collection».\n\nCada request incluye un ejemplo de cuerpo y, en «Examples», ejemplos de respuesta con sus errores.\nErrores: {\"error\": {\"codigo\": \"...\", \"mensaje\": \"...\"}}.\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
@@ -316,7 +316,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"peliculas\": [\n    {\n      \"id\": 1,\n      \"titulo\": \"Intensa-Mente 2\",\n      \"genero\": \"Animación\",\n      \"clasificacion\": \"A\",\n      \"duracion_min\": 96,\n      \"sinopsis\": \"Las emociones de Riley.\",\n      \"poster_url\": \"/posters/intensa-mente-2.jpg\",\n      \"activa\": true\n    }\n  ]\n}"
+              "body": "{\n  \"peliculas\": [\n    {\n      \"id\": 1,\n      \"titulo\": \"Intensa-Mente 2\",\n      \"genero\": \"Animación\",\n      \"clasificacion\": \"Todo público\",\n      \"duracion_min\": 96,\n      \"sinopsis\": \"Las emociones de Riley.\",\n      \"poster_url\": \"/posters/intensamente-2.jpg\",\n      \"activa\": true\n    }\n  ]\n}"
             }
           ],
           "event": [
@@ -383,7 +383,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"pelicula\": {\n    \"id\": 1,\n    \"titulo\": \"Intensa-Mente 2\",\n    \"genero\": \"Animación\",\n    \"clasificacion\": \"A\",\n    \"duracion_min\": 96,\n    \"sinopsis\": \"Las emociones de Riley.\",\n    \"poster_url\": \"/posters/intensa-mente-2.jpg\",\n    \"activa\": true\n  }\n}"
+              "body": "{\n  \"pelicula\": {\n    \"id\": 1,\n    \"titulo\": \"Intensa-Mente 2\",\n    \"genero\": \"Animación\",\n    \"clasificacion\": \"Todo público\",\n    \"duracion_min\": 96,\n    \"sinopsis\": \"Las emociones de Riley.\",\n    \"poster_url\": \"/posters/intensamente-2.jpg\",\n    \"activa\": true\n  }\n}"
             },
             {
               "name": "No existe o está inactiva",
@@ -477,7 +477,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"funciones\": [\n    {\n      \"id\": 1,\n      \"pelicula\": {\n        \"id\": 1,\n        \"titulo\": \"Intensa-Mente 2\",\n        \"poster_url\": \"/posters/intensa-mente-2.jpg\",\n        \"duracion_min\": 96,\n        \"clasificacion\": \"A\",\n        \"genero\": \"Animación\"\n      },\n      \"sala\": {\n        \"id\": 1,\n        \"nombre\": \"Sala 1\"\n      },\n      \"inicio\": \"2026-11-05T20:00:00-05:00\",\n      \"fin\": \"2026-11-05T21:36:00-05:00\",\n      \"precio\": 20000,\n      \"estado\": \"activa\",\n      \"capacidad\": 72,\n      \"asientos_disponibles\": 72\n    }\n  ]\n}"
+              "body": "{\n  \"funciones\": [\n    {\n      \"id\": 1,\n      \"pelicula\": {\n        \"id\": 1,\n        \"titulo\": \"Intensa-Mente 2\",\n        \"poster_url\": \"/posters/intensamente-2.jpg\",\n        \"duracion_min\": 96,\n        \"clasificacion\": \"Todo público\",\n        \"genero\": \"Animación\"\n      },\n      \"sala\": {\n        \"id\": 1,\n        \"nombre\": \"Sala 1\"\n      },\n      \"inicio\": \"2026-11-05T20:00:00-05:00\",\n      \"fin\": \"2026-11-05T21:36:00-05:00\",\n      \"precio\": 20000,\n      \"estado\": \"activa\",\n      \"capacidad\": 72,\n      \"asientos_disponibles\": 72\n    }\n  ]\n}"
             }
           ],
           "event": [
@@ -562,7 +562,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"funciones\": [\n    {\n      \"id\": 1,\n      \"pelicula\": {\n        \"id\": 1,\n        \"titulo\": \"Intensa-Mente 2\",\n        \"poster_url\": \"/posters/intensa-mente-2.jpg\",\n        \"duracion_min\": 96,\n        \"clasificacion\": \"A\",\n        \"genero\": \"Animación\"\n      },\n      \"sala\": {\n        \"id\": 1,\n        \"nombre\": \"Sala 1\"\n      },\n      \"inicio\": \"2026-11-05T20:00:00-05:00\",\n      \"fin\": \"2026-11-05T21:36:00-05:00\",\n      \"precio\": 20000,\n      \"estado\": \"activa\",\n      \"capacidad\": 72,\n      \"asientos_disponibles\": 72\n    }\n  ]\n}"
+              "body": "{\n  \"funciones\": [\n    {\n      \"id\": 1,\n      \"pelicula\": {\n        \"id\": 1,\n        \"titulo\": \"Intensa-Mente 2\",\n        \"poster_url\": \"/posters/intensamente-2.jpg\",\n        \"duracion_min\": 96,\n        \"clasificacion\": \"Todo público\",\n        \"genero\": \"Animación\"\n      },\n      \"sala\": {\n        \"id\": 1,\n        \"nombre\": \"Sala 1\"\n      },\n      \"inicio\": \"2026-11-05T20:00:00-05:00\",\n      \"fin\": \"2026-11-05T21:36:00-05:00\",\n      \"precio\": 20000,\n      \"estado\": \"activa\",\n      \"capacidad\": 72,\n      \"asientos_disponibles\": 72\n    }\n  ]\n}"
             },
             {
               "name": "Fecha inválida",
@@ -667,7 +667,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"funcion\": {\n    \"id\": 1,\n    \"pelicula\": {\n      \"id\": 1,\n      \"titulo\": \"Intensa-Mente 2\",\n      \"poster_url\": \"/posters/intensa-mente-2.jpg\",\n      \"duracion_min\": 96,\n      \"clasificacion\": \"A\",\n      \"genero\": \"Animación\"\n    },\n    \"sala\": {\n      \"id\": 1,\n      \"nombre\": \"Sala 1\"\n    },\n    \"inicio\": \"2026-11-05T20:00:00-05:00\",\n    \"fin\": \"2026-11-05T21:36:00-05:00\",\n    \"precio\": 20000,\n    \"estado\": \"activa\",\n    \"capacidad\": 72,\n    \"asientos_disponibles\": 72\n  }\n}"
+              "body": "{\n  \"funcion\": {\n    \"id\": 1,\n    \"pelicula\": {\n      \"id\": 1,\n      \"titulo\": \"Intensa-Mente 2\",\n      \"poster_url\": \"/posters/intensamente-2.jpg\",\n      \"duracion_min\": 96,\n      \"clasificacion\": \"Todo público\",\n      \"genero\": \"Animación\"\n    },\n    \"sala\": {\n      \"id\": 1,\n      \"nombre\": \"Sala 1\"\n    },\n    \"inicio\": \"2026-11-05T20:00:00-05:00\",\n    \"fin\": \"2026-11-05T21:36:00-05:00\",\n    \"precio\": 20000,\n    \"estado\": \"activa\",\n    \"capacidad\": 72,\n    \"asientos_disponibles\": 72\n  }\n}"
             },
             {
               "name": "No existe",
@@ -4459,7 +4459,7 @@
             "description": "Guarda `pelicula_nueva_id`.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"titulo\": \"Moana 2\",\n  \"genero\": \"Animación\",\n  \"clasificacion\": \"A\",\n  \"duracion_min\": 100,\n  \"sinopsis\": \"Moana vuelve al océano.\",\n  \"poster_url\": \"/posters/moana-2.jpg\"\n}",
+              "raw": "{\n  \"titulo\": \"Moana 2\",\n  \"genero\": \"Animación\",\n  \"clasificacion\": \"Todo público\",\n  \"duracion_min\": 100,\n  \"sinopsis\": \"Moana vuelve al océano.\",\n  \"poster_url\": \"/posters/moana.jpg\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -4490,7 +4490,7 @@
                 "description": "Guarda `pelicula_nueva_id`.",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"titulo\": \"Moana 2\",\n  \"genero\": \"Animación\",\n  \"clasificacion\": \"A\",\n  \"duracion_min\": 100,\n  \"sinopsis\": \"Moana vuelve al océano.\",\n  \"poster_url\": \"/posters/moana-2.jpg\"\n}",
+                  "raw": "{\n  \"titulo\": \"Moana 2\",\n  \"genero\": \"Animación\",\n  \"clasificacion\": \"Todo público\",\n  \"duracion_min\": 100,\n  \"sinopsis\": \"Moana vuelve al océano.\",\n  \"poster_url\": \"/posters/moana.jpg\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -4507,7 +4507,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"pelicula\": {\n    \"id\": 8,\n    \"titulo\": \"Moana 2\",\n    \"genero\": \"Animación\",\n    \"clasificacion\": \"A\",\n    \"duracion_min\": 96,\n    \"sinopsis\": \"Las emociones de Riley.\",\n    \"poster_url\": \"/posters/intensa-mente-2.jpg\",\n    \"activa\": true\n  }\n}"
+              "body": "{\n  \"pelicula\": {\n    \"id\": 8,\n    \"titulo\": \"Moana 2\",\n    \"genero\": \"Animación\",\n    \"clasificacion\": \"Todo público\",\n    \"duracion_min\": 96,\n    \"sinopsis\": \"Las emociones de Riley.\",\n    \"poster_url\": \"/posters/intensamente-2.jpg\",\n    \"activa\": true\n  }\n}"
             },
             {
               "name": "Duración inválida",
@@ -4531,7 +4531,7 @@
                 "description": "Guarda `pelicula_nueva_id`.",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"titulo\": \"Moana 2\",\n  \"genero\": \"Animación\",\n  \"clasificacion\": \"A\",\n  \"duracion_min\": 100,\n  \"sinopsis\": \"Moana vuelve al océano.\",\n  \"poster_url\": \"/posters/moana-2.jpg\"\n}",
+                  "raw": "{\n  \"titulo\": \"Moana 2\",\n  \"genero\": \"Animación\",\n  \"clasificacion\": \"Todo público\",\n  \"duracion_min\": 100,\n  \"sinopsis\": \"Moana vuelve al océano.\",\n  \"poster_url\": \"/posters/moana.jpg\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -4549,6 +4549,47 @@
                 }
               ],
               "body": "{\n  \"error\": {\n    \"codigo\": \"DURACION_INVALIDA\",\n    \"mensaje\": \"El campo 'duracion_min' debe estar entre 1 y 600.\"\n  }\n}"
+            },
+            {
+              "name": "Clasificación no permitida",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/peliculas",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "peliculas"
+                  ]
+                },
+                "description": "Guarda `pelicula_nueva_id`.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"titulo\": \"Moana 2\",\n  \"genero\": \"Animación\",\n  \"clasificacion\": \"Todo público\",\n  \"duracion_min\": 100,\n  \"sinopsis\": \"Moana vuelve al océano.\",\n  \"poster_url\": \"/posters/moana.jpg\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": {\n    \"codigo\": \"CLASIFICACION_INVALIDA\",\n    \"mensaje\": \"La clasificación no es válida. Valores permitidos: Todo público, Mayores de 7, Mayores de 12, Mayores de 15, Mayores de 18.\"\n  }\n}"
             },
             {
               "name": "Rol incorrecto",
@@ -4572,7 +4613,7 @@
                 "description": "Guarda `pelicula_nueva_id`.",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"titulo\": \"Moana 2\",\n  \"genero\": \"Animación\",\n  \"clasificacion\": \"A\",\n  \"duracion_min\": 100,\n  \"sinopsis\": \"Moana vuelve al océano.\",\n  \"poster_url\": \"/posters/moana-2.jpg\"\n}",
+                  "raw": "{\n  \"titulo\": \"Moana 2\",\n  \"genero\": \"Animación\",\n  \"clasificacion\": \"Todo público\",\n  \"duracion_min\": 100,\n  \"sinopsis\": \"Moana vuelve al océano.\",\n  \"poster_url\": \"/posters/moana.jpg\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -4678,7 +4719,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"pelicula\": {\n    \"id\": 1,\n    \"titulo\": \"Intensa-Mente 2\",\n    \"genero\": \"Aventura\",\n    \"clasificacion\": \"A\",\n    \"duracion_min\": 96,\n    \"sinopsis\": \"Las emociones de Riley.\",\n    \"poster_url\": \"/posters/intensa-mente-2.jpg\",\n    \"activa\": true\n  }\n}"
+              "body": "{\n  \"pelicula\": {\n    \"id\": 1,\n    \"titulo\": \"Intensa-Mente 2\",\n    \"genero\": \"Aventura\",\n    \"clasificacion\": \"Todo público\",\n    \"duracion_min\": 96,\n    \"sinopsis\": \"Las emociones de Riley.\",\n    \"poster_url\": \"/posters/intensamente-2.jpg\",\n    \"activa\": true\n  }\n}"
             },
             {
               "name": "Sin token",
@@ -5062,7 +5103,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"funcion\": {\n    \"id\": 1,\n    \"pelicula\": {\n      \"id\": 1,\n      \"titulo\": \"Intensa-Mente 2\",\n      \"poster_url\": \"/posters/intensa-mente-2.jpg\",\n      \"duracion_min\": 96,\n      \"clasificacion\": \"A\",\n      \"genero\": \"Animación\"\n    },\n    \"sala\": {\n      \"id\": 1,\n      \"nombre\": \"Sala 1\"\n    },\n    \"inicio\": \"2026-11-05T20:00:00-05:00\",\n    \"fin\": \"2026-11-05T21:36:00-05:00\",\n    \"precio\": 20000,\n    \"estado\": \"activa\",\n    \"capacidad\": 72,\n    \"asientos_disponibles\": 72\n  }\n}"
+              "body": "{\n  \"funcion\": {\n    \"id\": 1,\n    \"pelicula\": {\n      \"id\": 1,\n      \"titulo\": \"Intensa-Mente 2\",\n      \"poster_url\": \"/posters/intensamente-2.jpg\",\n      \"duracion_min\": 96,\n      \"clasificacion\": \"Todo público\",\n      \"genero\": \"Animación\"\n    },\n    \"sala\": {\n      \"id\": 1,\n      \"nombre\": \"Sala 1\"\n    },\n    \"inicio\": \"2026-11-05T20:00:00-05:00\",\n    \"fin\": \"2026-11-05T21:36:00-05:00\",\n    \"precio\": 20000,\n    \"estado\": \"activa\",\n    \"capacidad\": 72,\n    \"asientos_disponibles\": 72\n  }\n}"
             },
             {
               "name": "Se solapa con otra",
@@ -5282,7 +5323,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"funcion\": {\n    \"id\": 1,\n    \"pelicula\": {\n      \"id\": 1,\n      \"titulo\": \"Intensa-Mente 2\",\n      \"poster_url\": \"/posters/intensa-mente-2.jpg\",\n      \"duracion_min\": 96,\n      \"clasificacion\": \"A\",\n      \"genero\": \"Animación\"\n    },\n    \"sala\": {\n      \"id\": 1,\n      \"nombre\": \"Sala 1\"\n    },\n    \"inicio\": \"2026-11-05T20:00:00-05:00\",\n    \"fin\": \"2026-11-05T21:36:00-05:00\",\n    \"precio\": 20000,\n    \"estado\": \"activa\",\n    \"capacidad\": 72,\n    \"asientos_disponibles\": 72\n  }\n}"
+              "body": "{\n  \"funcion\": {\n    \"id\": 1,\n    \"pelicula\": {\n      \"id\": 1,\n      \"titulo\": \"Intensa-Mente 2\",\n      \"poster_url\": \"/posters/intensamente-2.jpg\",\n      \"duracion_min\": 96,\n      \"clasificacion\": \"Todo público\",\n      \"genero\": \"Animación\"\n    },\n    \"sala\": {\n      \"id\": 1,\n      \"nombre\": \"Sala 1\"\n    },\n    \"inicio\": \"2026-11-05T20:00:00-05:00\",\n    \"fin\": \"2026-11-05T21:36:00-05:00\",\n    \"precio\": 20000,\n    \"estado\": \"activa\",\n    \"capacidad\": 72,\n    \"asientos_disponibles\": 72\n  }\n}"
             },
             {
               "name": "Sin token",
@@ -5422,7 +5463,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"funcion\": {\n    \"id\": 1,\n    \"pelicula\": {\n      \"id\": 1,\n      \"titulo\": \"Intensa-Mente 2\",\n      \"poster_url\": \"/posters/intensa-mente-2.jpg\",\n      \"duracion_min\": 96,\n      \"clasificacion\": \"A\",\n      \"genero\": \"Animación\"\n    },\n    \"sala\": {\n      \"id\": 1,\n      \"nombre\": \"Sala 1\"\n    },\n    \"inicio\": \"2026-11-05T20:00:00-05:00\",\n    \"fin\": \"2026-11-05T21:36:00-05:00\",\n    \"precio\": 22000,\n    \"estado\": \"activa\",\n    \"capacidad\": 72,\n    \"asientos_disponibles\": 72\n  }\n}"
+              "body": "{\n  \"funcion\": {\n    \"id\": 1,\n    \"pelicula\": {\n      \"id\": 1,\n      \"titulo\": \"Intensa-Mente 2\",\n      \"poster_url\": \"/posters/intensamente-2.jpg\",\n      \"duracion_min\": 96,\n      \"clasificacion\": \"Todo público\",\n      \"genero\": \"Animación\"\n    },\n    \"sala\": {\n      \"id\": 1,\n      \"nombre\": \"Sala 1\"\n    },\n    \"inicio\": \"2026-11-05T20:00:00-05:00\",\n    \"fin\": \"2026-11-05T21:36:00-05:00\",\n    \"precio\": 22000,\n    \"estado\": \"activa\",\n    \"capacidad\": 72,\n    \"asientos_disponibles\": 72\n  }\n}"
             },
             {
               "name": "Tiene ventas",
@@ -5533,7 +5574,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"funciones\": [\n    {\n      \"id\": 1,\n      \"pelicula\": {\n        \"id\": 1,\n        \"titulo\": \"Intensa-Mente 2\",\n        \"poster_url\": \"/posters/intensa-mente-2.jpg\",\n        \"duracion_min\": 96,\n        \"clasificacion\": \"A\",\n        \"genero\": \"Animación\"\n      },\n      \"sala\": {\n        \"id\": 1,\n        \"nombre\": \"Sala 1\"\n      },\n      \"inicio\": \"2026-11-05T20:00:00-05:00\",\n      \"fin\": \"2026-11-05T21:36:00-05:00\",\n      \"precio\": 20000,\n      \"estado\": \"activa\",\n      \"capacidad\": 72,\n      \"asientos_disponibles\": 72\n    }\n  ]\n}"
+              "body": "{\n  \"funciones\": [\n    {\n      \"id\": 1,\n      \"pelicula\": {\n        \"id\": 1,\n        \"titulo\": \"Intensa-Mente 2\",\n        \"poster_url\": \"/posters/intensamente-2.jpg\",\n        \"duracion_min\": 96,\n        \"clasificacion\": \"Todo público\",\n        \"genero\": \"Animación\"\n      },\n      \"sala\": {\n        \"id\": 1,\n        \"nombre\": \"Sala 1\"\n      },\n      \"inicio\": \"2026-11-05T20:00:00-05:00\",\n      \"fin\": \"2026-11-05T21:36:00-05:00\",\n      \"precio\": 20000,\n      \"estado\": \"activa\",\n      \"capacidad\": 72,\n      \"asientos_disponibles\": 72\n    }\n  ]\n}"
             },
             {
               "name": "Sin token",
@@ -5655,7 +5696,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"funcion\": {\n    \"id\": 1,\n    \"pelicula\": {\n      \"id\": 1,\n      \"titulo\": \"Intensa-Mente 2\",\n      \"poster_url\": \"/posters/intensa-mente-2.jpg\",\n      \"duracion_min\": 96,\n      \"clasificacion\": \"A\",\n      \"genero\": \"Animación\"\n    },\n    \"sala\": {\n      \"id\": 1,\n      \"nombre\": \"Sala 1\"\n    },\n    \"inicio\": \"2026-11-05T20:00:00-05:00\",\n    \"fin\": \"2026-11-05T21:36:00-05:00\",\n    \"precio\": 20000,\n    \"estado\": \"cancelada\",\n    \"capacidad\": 72,\n    \"asientos_disponibles\": 72\n  },\n  \"entradas_anuladas\": 2,\n  \"total_a_reembolsar\": 66000,\n  \"compras_afectadas\": [\n    {\n      \"compra_id\": 1,\n      \"numero\": \"C-000001\",\n      \"cantidad_entradas\": 2,\n      \"total\": 44000,\n      \"metodo_pago\": \"tarjeta\",\n      \"cliente\": {\n        \"nombre\": \"Cliente Demo\",\n        \"documento\": null,\n        \"contacto\": null\n      }\n    }\n  ]\n}"
+              "body": "{\n  \"funcion\": {\n    \"id\": 1,\n    \"pelicula\": {\n      \"id\": 1,\n      \"titulo\": \"Intensa-Mente 2\",\n      \"poster_url\": \"/posters/intensamente-2.jpg\",\n      \"duracion_min\": 96,\n      \"clasificacion\": \"Todo público\",\n      \"genero\": \"Animación\"\n    },\n    \"sala\": {\n      \"id\": 1,\n      \"nombre\": \"Sala 1\"\n    },\n    \"inicio\": \"2026-11-05T20:00:00-05:00\",\n    \"fin\": \"2026-11-05T21:36:00-05:00\",\n    \"precio\": 20000,\n    \"estado\": \"cancelada\",\n    \"capacidad\": 72,\n    \"asientos_disponibles\": 72\n  },\n  \"entradas_anuladas\": 2,\n  \"total_a_reembolsar\": 66000,\n  \"compras_afectadas\": [\n    {\n      \"compra_id\": 1,\n      \"numero\": \"C-000001\",\n      \"cantidad_entradas\": 2,\n      \"total\": 44000,\n      \"metodo_pago\": \"tarjeta\",\n      \"cliente\": {\n        \"nombre\": \"Cliente Demo\",\n        \"documento\": null,\n        \"contacto\": null\n      }\n    }\n  ]\n}"
             },
             {
               "name": "Ya cancelada",
@@ -6064,7 +6105,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"pelicula\": {\n    \"id\": 1,\n    \"titulo\": \"Intensa-Mente 2\",\n    \"genero\": \"Animación\",\n    \"clasificacion\": \"A\",\n    \"duracion_min\": 96,\n    \"sinopsis\": \"Las emociones de Riley.\",\n    \"poster_url\": \"/posters/intensa-mente-2.jpg\",\n    \"activa\": false\n  }\n}"
+              "body": "{\n  \"pelicula\": {\n    \"id\": 1,\n    \"titulo\": \"Intensa-Mente 2\",\n    \"genero\": \"Animación\",\n    \"clasificacion\": \"Todo público\",\n    \"duracion_min\": 96,\n    \"sinopsis\": \"Las emociones de Riley.\",\n    \"poster_url\": \"/posters/intensamente-2.jpg\",\n    \"activa\": false\n  }\n}"
             },
             {
               "name": "Sin token",

@@ -59,10 +59,23 @@ def _obtener_o_crear_cliente(usuario):
     return cliente
 
 
+# Campos de presentación que el seed mantiene actualizados en películas existentes.
+CAMPOS_ACTUALIZABLES = ("poster_url", "clasificacion")
+
+
 def _obtener_o_crear_pelicula(datos):
-    """Busca una película por título; si no existe, la crea."""
+    """Upsert por título.
+
+    - Si la película no existe, la crea.
+    - Si ya existe, ACTUALIZA solo `poster_url` y `clasificacion` cuando difieren.
+      Nunca cambia el título ni el id, así que las funciones, reservas, compras
+      y entradas asociadas quedan intactas. Repetirlo no cambia nada más.
+    """
     pelicula = Pelicula.query.filter_by(titulo=datos["titulo"]).first()
     if pelicula:
+        for campo in CAMPOS_ACTUALIZABLES:
+            if getattr(pelicula, campo) != datos[campo]:
+                setattr(pelicula, campo, datos[campo])
         return pelicula
     pelicula = Pelicula(**datos)
     db.session.add(pelicula)
@@ -138,30 +151,43 @@ def _codigo_entrada() -> str:
 # --- Catálogo base --------------------------------------------------------
 
 PELICULAS = [
-    {"titulo": "Intensa-Mente 2", "genero": "Animación", "clasificacion": "A",
+    {"titulo": "Intensa-Mente 2", "genero": "Animación", "clasificacion": "Todo público",
      "duracion_min": 96, "sinopsis": "Las emociones de Riley en la adolescencia.",
-     "poster_url": "/posters/Intensa-Mente 2.jpg", "activa": True},
-    {"titulo": "Deadpool & Wolverine", "genero": "Acción", "clasificacion": "C",
+     "poster_url": "/posters/intensamente-2.jpg", "activa": True},
+    {"titulo": "Deadpool & Wolverine", "genero": "Acción", "clasificacion": "Mayores de 15",
      "duracion_min": 127, "sinopsis": "Dos antihéroes unen fuerzas.",
-     "poster_url": "/posters/Deadpool & Wolverine.jpg", "activa": True},
-    {"titulo": "La Odisea", "genero": "Aventura", "clasificacion": "B",
+     "poster_url": "/posters/deadpool-wolverine.jpg", "activa": True},
+    {"titulo": "La Odisea", "genero": "Aventura", "clasificacion": "Mayores de 12",
      "duracion_min": 140, "sinopsis": "El viaje de regreso de Ulises.",
-     "poster_url": "/posters/La Odisea.jpg", "activa": True},
-    {"titulo": "Moana", "genero": "Animación", "clasificacion": "A",
+     "poster_url": "/posters/la-odisea.jpg", "activa": True},
+    {"titulo": "Moana", "genero": "Animación", "clasificacion": "Todo público",
      "duracion_min": 107, "sinopsis": "Una joven navega el océano.",
-     "poster_url": "/posters/Moana.jpg", "activa": True},
-    {"titulo": "La Noche del Demonio", "genero": "Terror", "clasificacion": "C",
+     "poster_url": "/posters/moana.jpg", "activa": True},
+    {"titulo": "La Noche del Demonio", "genero": "Terror", "clasificacion": "Mayores de 15",
      "duracion_min": 103, "sinopsis": "Una familia enfrenta fuerzas oscuras.",
-     "poster_url": "/posters/La Noche del Demonio.jpg", "activa": True},
-    {"titulo": "Scary Movie", "genero": "Comedia", "clasificacion": "C",
+     "poster_url": "/posters/la-noche-del-demonio.jpg", "activa": True},
+    {"titulo": "Scary Movie", "genero": "Comedia", "clasificacion": "Mayores de 15",
      "duracion_min": 88, "sinopsis": "Parodia de películas de terror.",
-     "poster_url": "/posters/Scary Movie.jpg", "activa": True},
+     "poster_url": "/posters/scary-movie.jpg", "activa": True},
     {"titulo": "Spider-Man: Brand New Day", "genero": "Acción",
-     "clasificacion": "B", "duracion_min": 148,
+     "clasificacion": "Mayores de 12", "duracion_min": 148,
      "sinopsis": "El hombre araña enfrenta una nueva etapa.",
-     "poster_url": "/posters/Spider-Man Brand New Day.jpg", "activa": True},
+     "poster_url": "/posters/spiderman-brand-new-day.webp", "activa": True},
 ]
 
+
+def sembrar_peliculas():
+    """Crea las películas del catálogo o actualiza póster y clasificación (upsert).
+
+    Se puede ejecutar sola (sin tocar funciones, reservas ni ventas). Valida que
+    cada clasificación sea uno de los valores permitidos por la API.
+    """
+    from app.services.peliculas_service import CLASIFICACIONES_PERMITIDAS
+    for datos in PELICULAS:
+        assert datos["clasificacion"] in CLASIFICACIONES_PERMITIDAS, datos["titulo"]
+    peliculas = [_obtener_o_crear_pelicula(d) for d in PELICULAS]
+    db.session.flush()
+    return peliculas
 
 def ejecutar_seed():
     """Ejecuta la carga completa de datos de prueba de forma idempotente."""
@@ -178,7 +204,7 @@ def ejecutar_seed():
     cliente = _obtener_o_crear_cliente(u_cliente)
 
     # 2) Películas
-    peliculas = [_obtener_o_crear_pelicula(d) for d in PELICULAS]
+    peliculas = sembrar_peliculas()
 
     # 3) Salas
     sala1 = _obtener_o_crear_sala("Sala 1", filas=6, asientos_por_fila=12)

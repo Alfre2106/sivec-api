@@ -167,23 +167,36 @@ iniciar sesión. **200**: `{ "usuario": { ..., "activo": false } }`. Error: `404
 
 Objeto película: `{ id, titulo, genero, clasificacion, duracion_min, sinopsis, poster_url, activa }`.
 
+**`clasificacion`** solo admite estos valores (texto exacto, con mayúsculas y tilde) o `null` si no se indica:
+
+| Valor |
+|---|
+| `Todo público` |
+| `Mayores de 7` |
+| `Mayores de 12` |
+| `Mayores de 15` |
+| `Mayores de 18` |
+
+**`poster_url`** es una ruta del frontend (carpeta `public/posters`), p. ej. `/posters/moana.jpg`; la API no sirve imágenes.
+
 ### `GET /api/peliculas`
 **Rol:** público. Solo las películas **activas**, ordenadas por título.
 ```json
-{ "peliculas": [ { "id": 1, "titulo": "Intensa-Mente 2", "genero": "Animación", "clasificacion": "A",
+{ "peliculas": [ { "id": 1, "titulo": "Intensa-Mente 2", "genero": "Animación", "clasificacion": "Todo público",
                    "duracion_min": 96, "sinopsis": "Las emociones de Riley.",
-                   "poster_url": "/posters/intensa-mente-2.jpg", "activa": true } ] }
+                   "poster_url": "/posters/intensamente-2.jpg", "activa": true } ] }
 ```
 
 ### `GET /api/peliculas/{id}`
 **Rol:** público. **200**: `{ "pelicula": { ... } }`. Una película inactiva responde `404 PELICULA_NO_ENCONTRADA`.
 
 ### `POST /api/peliculas`
-**Rol:** administrador. Solo `titulo` es obligatorio; `duracion_min` entre 1 y 600; `poster_url` es
-texto (ruta o URL); `activa` es opcional (por defecto `true`).
+**Rol:** administrador. Solo `titulo` es obligatorio; `duracion_min` entre 1 y 600; `clasificacion`, si se envía,
+debe ser uno de los [cinco valores permitidos](#películas); `poster_url` es texto (ruta o URL); `activa` es opcional
+(por defecto `true`).
 ```json
-{ "titulo": "Intensa-Mente 2", "genero": "Animación", "clasificacion": "A", "duracion_min": 96,
-  "sinopsis": "Las emociones de Riley.", "poster_url": "/posters/intensa-mente-2.jpg" }
+{ "titulo": "Intensa-Mente 2", "genero": "Animación", "clasificacion": "Todo público", "duracion_min": 96,
+  "sinopsis": "Las emociones de Riley.", "poster_url": "/posters/intensamente-2.jpg" }
 ```
 **201**: `{ "pelicula": { ... } }`
 
@@ -191,11 +204,13 @@ texto (ruta o URL); `activa` es opcional (por defecto `true`).
 |---|---|---|
 | 422 | `CAMPOS_REQUERIDOS` | Falta `titulo` |
 | 422 | `DURACION_INVALIDA` | `duracion_min` fuera de 1–600 o no entero |
+| 422 | `CLASIFICACION_INVALIDA` | `clasificacion` no es uno de los cinco valores permitidos (el mensaje los lista) |
 | 422 | `POSTER_INVALIDO` | `poster_url` no es texto |
 
 ### `PUT /api/peliculas/{id}`
 **Rol:** administrador. Edición parcial (mismos campos). **200**: `{ "pelicula": { ... } }`.
-Errores: `404 PELICULA_NO_ENCONTRADA`, `422 DURACION_INVALIDA`, `422 POSTER_INVALIDO`.
+Errores: `404 PELICULA_NO_ENCONTRADA`, `422 DURACION_INVALIDA`, `422 CLASIFICACION_INVALIDA`, `422 POSTER_INVALIDO`.
+Si `clasificacion` no se menciona en el cuerpo, conserva su valor.
 
 ### `DELETE /api/peliculas/{id}`
 **Rol:** administrador. **Solo desactiva** (`activa = false`), nunca borra. Una película inactiva
@@ -247,8 +262,8 @@ Objeto función:
 
 ```json
 { "id": 1,
-  "pelicula": { "id": 1, "titulo": "Intensa-Mente 2", "poster_url": "/posters/intensa-mente-2.jpg",
-                "duracion_min": 96, "clasificacion": "A", "genero": "Animación" },
+  "pelicula": { "id": 1, "titulo": "Intensa-Mente 2", "poster_url": "/posters/intensamente-2.jpg",
+                "duracion_min": 96, "clasificacion": "Todo público", "genero": "Animación" },
   "sala": { "id": 1, "nombre": "Sala Principal" },
   "inicio": "2026-11-03T22:44:03-05:00", "fin": "2026-11-04T00:20:03-05:00",
   "precio": 20000, "estado": "activa", "capacidad": 72, "asientos_disponibles": 72 }
