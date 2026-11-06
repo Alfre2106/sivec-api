@@ -1,249 +1,259 @@
-# SIVEC API
+# SIVEC API (backend)
 
-**SIVEC** es un Sistema de Venta de Entradas para cine/eventos (proyecto universitario). Este repositorio es el
-**backend**: una API REST en Flask + PostgreSQL que usa el frontend en React.
+**Sistema de Venta de Entradas para Eventos/Cine (SIVEC)**: API REST en Flask con base de datos PostgreSQL.
+Proyecto final de *Administración de Sistemas de Información* (Ingeniería de Sistemas y Computación, semestre VIII, CUL).
 
-Qué hace:
+Este repositorio es el **backend**. La interfaz web está en el repositorio **sivec-front** (ver sección 6).
 
-- Catálogo público de películas, salas y funciones, con **mapa de asientos** en tiempo real.
-- **Reservas temporales** (5 minutos) y **compra con pago simulado**, con generación de entradas con código único y **QR**.
-- **Validación en puerta** de entradas (una sola vez, con registro de todos los intentos).
-- Roles: **cliente**, **taquillero** y **administrador** (permisos validados siempre en el servidor).
-- Administración de películas, salas, funciones y usuarios; **cancelación de funciones** con anulación de entradas y lista para reembolso.
-- **Reportes** e indicadores, con exportación a CSV.
-- Concurrencia segura: dos personas no pueden reservar, comprar ni validar lo mismo a la vez (bloqueos de fila en PostgreSQL).
+> Aviso: es un proyecto académico. El pago es **simulado** (no se procesa ningún pago real) y los pósters y nombres de películas son solo datos de prueba.
 
-## Stack
+---
 
-Python 3.11+ (probado con 3.12) · Flask 3 · PostgreSQL 14+ (probado con 17) · Flask-SQLAlchemy / Flask-Migrate (Alembic) ·
-Flask-JWT-Extended · bcrypt · Flask-CORS · APScheduler · qrcode · pytest.
+## 1. Cómo se conectan las piezas
 
-## Requisitos
+El sistema tiene **tres partes que deben estar encendidas a la vez**:
 
-| Programa | Versión | Para qué |
+```
+ NAVEGADOR (interfaz React)          API (este proyecto)             BASE DE DATOS
+ http://localhost:5173      --->     http://localhost:5000/api  --->  PostgreSQL (puerto 5432)
+ repositorio sivec-front            repositorio sivec-api            bases: sivec y sivec_test
+```
+
+La interfaz nunca habla con la base de datos: solo la API lo hace. Por eso las reglas (un asiento no se vende dos veces, permisos por rol) se cumplen siempre.
+
+| Pieza | Puerto | Quién la enciende |
 |---|---|---|
-| Python | 3.11 o superior | Ejecutar la API (`python --version`) |
-| PostgreSQL | 14 o superior | Base de datos (incluye `psql`, `pg_dump`, `pg_restore`) |
-| Git | cualquiera | Obtener el código |
+| PostgreSQL | 5432 | Servicio de Windows (queda activo al instalarlo) |
+| API Flask | 5000 | `python run.py` en este repositorio |
+| Interfaz React | 5173 | `npm run dev` en el repositorio sivec-front |
 
-## Instalación paso a paso (Windows)
+---
 
-Todos los comandos son de **PowerShell**, desde la carpeta del proyecto.
+## 2. Requisitos
 
-### 1. Obtener el código
+- **Windows** con PowerShell (los comandos de esta guía son para PowerShell)
+- **Git**
+- **Python 3.11 o superior** (`python --version`)
+- **PostgreSQL 16 o 17** (el proyecto se desarrolló con la 17). Anota la contraseña del usuario `postgres`
+- **Node.js 20 LTS o superior** (solo para la interfaz; `node --version`)
+- Navegador actual: Chrome, Edge o Firefox
+
+No hace falta pgAdmin: todo se puede hacer con `psql`, que viene con PostgreSQL.
+
+---
+
+## 3. Instalación del backend, paso a paso
+
+Se recomienda clonar ambos repositorios en la misma carpeta, por ejemplo `C:\proyectos\`.
+
+### 3.1 Clonar
 
 ```powershell
-git clone <URL-del-repositorio> sivec-api
+cd C:\proyectos
+git clone https://github.com/USUARIO/sivec-api.git
 cd sivec-api
 ```
 
-### 2. Crear las bases de datos en PostgreSQL
+### 3.2 Crear las bases de datos
 
-Necesitas dos: `sivec` (la de trabajo) y `sivec_test` (solo para las pruebas automáticas, **se vacía en cada prueba**).
+Cambia `17` por tu versión de PostgreSQL si es otra. Te pedirá la contraseña de `postgres` (al escribirla no se ve nada, es normal):
 
 ```powershell
-psql -U postgres -c "CREATE DATABASE sivec;"
-psql -U postgres -c "CREATE DATABASE sivec_test;"
+& "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -h localhost -c "CREATE DATABASE sivec;"
+& "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -h localhost -c "CREATE DATABASE sivec_test;"
 ```
 
-Si `psql` no se reconoce, usa la ruta completa
-(`& "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -c "..."`) o crea las bases desde pgAdmin.
-(Si no creas `sivec_test`, las pruebas la crean solas.)
+`sivec` es la base real y `sivec_test` es solo para las pruebas automáticas. Si dice que ya existen, está bien.
 
-### 3. Entorno virtual y dependencias
+### 3.3 Entorno virtual y dependencias
 
 ```powershell
 python -m venv venv
-.\venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
-Si PowerShell dice que la ejecución de scripts está deshabilitada:
-`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` y vuelve a activar el entorno.
+Si PowerShell bloquea la activación, ejecuta una vez `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` y repite.
+Sabrás que el entorno está activo porque la línea empieza con `(venv)`. **Debes activarlo en cada terminal nueva.**
 
-### 4. Configurar el `.env`
+### 3.4 Variables de entorno (`.env`)
+
+El archivo `.env` guarda tus claves y **nunca se sube a GitHub**. Cada integrante crea el suyo a partir de la plantilla:
 
 ```powershell
 Copy-Item .env.example .env
 notepad .env
 ```
 
-Completa como mínimo:
+Valores que debes cambiar:
 
 | Variable | Qué poner |
 |---|---|
+| `SECRET_KEY` | Una cadena aleatoria larga (ver comando abajo) |
+| `JWT_SECRET_KEY` | **Otra** cadena aleatoria, distinta de la anterior |
 | `DATABASE_URL` | `postgresql+psycopg2://postgres:TU_CLAVE@localhost:5432/sivec` |
-| `TEST_DATABASE_URL` | La misma conexión pero con la base `sivec_test` (**debe ser otra base y su nombre debe incluir «test»**) |
-| `SECRET_KEY` y `JWT_SECRET_KEY` | Dos cadenas largas y aleatorias distintas |
-| `CORS_ORIGENES` | Dirección del frontend, p. ej. `http://localhost:5173` |
+| `TEST_DATABASE_URL` | `postgresql+psycopg2://postgres:TU_CLAVE@localhost:5432/sivec_test` |
 
-Si tu contraseña tiene caracteres especiales (`@`, `:`, `/`, `#`), escríbela codificada: `@` → `%40`, `:` → `%3A`.
-El resto de variables (duración de la reserva, límites, etc.) tienen valores por defecto sensatos; están explicadas en `.env.example`.
-**Nunca subas el `.env` a git** (ya está en el `.gitignore`).
-
-### 5. Crear las tablas (migraciones)
+Para generar cada clave aleatoria (ejecútalo dos veces):
 
 ```powershell
-flask --app run db upgrade
+python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-### 6. Cargar datos de prueba
+Reglas del `.env`: sin comillas, sin espacios alrededor del `=`, y la contraseña de PostgreSQL **sin símbolos** como `@ : / # %` (rompen la dirección de conexión).
 
-```powershell
-flask --app run seed
-```
+Variables que normalmente se dejan como vienen:
 
-Es **idempotente** (puedes repetirlo sin duplicar datos) y crea funciones con fechas relativas a hoy, así que conviene
-volver a ejecutarlo cada pocos días para que haya funciones futuras. Crea:
-
-| Usuario | Rol | Contraseña |
+| Variable | Valor | Significado |
 |---|---|---|
-| `cliente@sivec.com` | cliente | `123456` |
-| `taquillero@sivec.com` | taquillero | `123456` |
-| `admin@sivec.com` | administrador | `123456` |
+| `CORS_ORIGENES` | `http://localhost:5173,http://127.0.0.1:5173` | Direcciones desde las que la interfaz puede llamar a la API |
+| `RESERVA_DURACION_MINUTOS` | `5` | Tiempo que dura una reserva de asientos |
+| `VALIDACION_ANTICIPACION_MINUTOS` | `120` (o sin definir) | Una entrada se acepta desde 2 horas antes de la función hasta que termina |
+| `ZONA_HORARIA` | `America/Bogota` | Las fechas se guardan en UTC y se muestran en hora de Colombia |
+| `JWT_EXPIRACION_MINUTOS` | `120` | Duración de la sesión |
 
-más 7 películas, 2 salas, varias funciones y algunas ventas y reservas de ejemplo.
+### 3.5 Crear las tablas y los datos de prueba
 
-## Ejecutar la API
+Con el entorno virtual activo:
+
+```powershell
+flask db upgrade
+flask seed
+```
+
+`flask db upgrade` crea las 11 tablas. `flask seed` carga usuarios, salas, películas y funciones de ejemplo; se puede ejecutar más de una vez sin duplicar datos.
+
+### 3.6 Encender la API
 
 ```powershell
 python run.py
 ```
 
-La API queda en `http://localhost:5000/api`. Por seguridad escucha **solo en tu equipo** (`127.0.0.1`). Si otros equipos de la
-red deben acceder (por ejemplo, un compañero con el frontend), define en el `.env` `FLASK_HOST=0.0.0.0` y
-`FLASK_ENV=production` (así no queda activo el depurador interactivo, que permite ejecutar código; en producción
-`SECRET_KEY` y `JWT_SECRET_KEY` son obligatorias). Puerto: `FLASK_PORT`.
+Comprueba que responde abriendo `http://localhost:5000/api/salud`. Debe mostrar `"base_datos": "ok"` y `"estado": "ok"`.
+Deja esa terminal abierta: mientras esté corriendo, la API está encendida (se apaga con `Ctrl + C`).
 
-Comprueba que responde:
+---
 
-```powershell
-Invoke-RestMethod http://localhost:5000/api/salud
-```
+## 4. Usuarios de prueba
 
-```
-estado base_datos servicio  hora_utc
------- ---------- --------  --------
-ok     ok         sivec-api 2026-11-04T02:59:01+00:00
-```
+La contraseña de los tres es `123456`:
 
-Al iniciar, un proceso en segundo plano (APScheduler) libera cada 30 segundos las reservas vencidas.
+| Correo | Rol | Qué puede hacer |
+|---|---|---|
+| `cliente@sivec.com` | Cliente | Ver cartelera, reservar, pagar (simulado), ver sus compras y entradas con QR |
+| `taquillero@sivec.com` | Taquillero | Vender en taquilla, validar entradas, ver su historial de ventas |
+| `admin@sivec.com` | Administrador | Gestionar películas, salas, funciones y usuarios, cancelar funciones, ver reportes |
 
-Probar un inicio de sesión:
+Un cliente nuevo también puede registrarse desde la interfaz. Estas contraseñas son solo para desarrollo local.
 
-```powershell
-$login = Invoke-RestMethod http://localhost:5000/api/auth/login -Method Post -ContentType application/json `
-  -Body (@{ correo = "admin@sivec.com"; password = "123456" } | ConvertTo-Json)
-Invoke-RestMethod http://localhost:5000/api/auth/yo -Headers @{ Authorization = "Bearer $($login.token)" }
-```
+---
 
-Para probar todos los endpoints con ejemplos, importa la colección de Postman de [`docs/postman/`](docs/postman).
+## 5. Pruebas automáticas
 
-## Ejecutar las pruebas
+Con el entorno activo y la base `sivec_test` creada:
 
 ```powershell
 python -m pytest -v
 ```
 
-Son 95 pruebas (≈ 1,5 minutos) que cubren los criterios de aceptación (CA-01 a CA-17), la concurrencia con hilos reales,
-los reportes, los permisos de **todas** las rutas, la robustez ante datos inválidos y los tiempos de respuesta.
+Las pruebas usan `sivec_test` y no tocan los datos de `sivec`. Incluyen la prueba de concurrencia: dos reservas simultáneas del mismo asiento, de las que solo una se confirma.
 
-- Usan **PostgreSQL real** y la base `TEST_DATABASE_URL` (`sivec_test`). **Nunca tocan la base de trabajo**: si
-  `TEST_DATABASE_URL` falta, apunta a la misma base que `DATABASE_URL` o su nombre no incluye «test», se niegan a ejecutarse.
-- El esquema de la base de pruebas se construye con las migraciones reales.
+---
 
-Variantes útiles:
+## 6. Levantar TODO el sistema a la vez (backend + frontend)
 
-```powershell
-python -m pytest -v -m concurrencia                 # solo las pruebas de concurrencia
-python -m pytest tests/test_rendimiento.py -v -s    # tabla de tiempos de respuesta (RNF-03, < 3 s)
-python -m pytest tests/test_reservas.py -v          # un solo archivo
-```
+Necesitas **dos terminales abiertas al mismo tiempo** (por ejemplo, una ventana del editor por proyecto). Los repositorios son: `sivec-api` (este) y `sivec-front`.
 
-## Respaldo y restauración
+**Antes de empezar**, confirma que el servicio de PostgreSQL está iniciado (normalmente ya lo está; si no, en `services.msc` busca `postgresql-x64-17` y dale *Iniciar*).
+
+**Terminal A: la API**
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\backup.ps1     # crea backups\sivec_AAAAMMDD_HHmm.dump
-powershell -ExecutionPolicy Bypass -File .\scripts\restore.ps1    # restaura el último en sivec_restore y cuenta filas
+cd C:\proyectos\sivec-api
+venv\Scripts\Activate.ps1
+python run.py
 ```
 
-Detalles, opciones y cómo programar el respaldo diario en Windows: [`docs/RESPALDO.md`](docs/RESPALDO.md).
+**Terminal B: la interfaz** (la primera vez, sigue antes la instalación del README de `sivec-front`)
 
-## Estructura del proyecto
-
-```
-sivec-api/
-  app/
-    __init__.py        Application factory (create_app)
-    config.py          Configuración por entorno (development / testing / production)
-    extensions.py      db, migrate, jwt, cors
-    scheduler.py       Job que libera reservas vencidas
-    models/            Un archivo por tabla (11 modelos) + enums
-    routes/            Blueprints: solo reciben la petición y responden
-    services/          Lógica de negocio: reservas, compras, validaciones, reportes...
-    utils/             Errores, roles (@rol_requerido), tiempo, validaciones, CSV, códigos
-  migrations/          Migraciones de Alembic
-  tests/               Pruebas con pytest
-  scripts/             seed, backup/restore (.ps1) y generadores de documentación
-  docs/                Documentación y colección de Postman
-  .env.example         Plantilla de configuración (sin secretos)
-  requirements.txt     Dependencias con versión fija
-  run.py               Punto de entrada
+```powershell
+cd C:\proyectos\sivec-front
+npm run dev
 ```
 
-## Documentación
+**Abrir el sistema:** `http://localhost:5173` en el navegador. **Escribe `localhost`, no `127.0.0.1`**, o el navegador puede bloquear las llamadas a la API.
 
-| Documento | Contenido |
+**Comprobaciones rápidas**
+
+1. `http://localhost:5000/api/salud` debe mostrar `"base_datos": "ok"`.
+2. En `http://localhost:5173`, la cartelera debe mostrar películas con sus pósters.
+3. Inicia sesión con `cliente@sivec.com` / `123456`.
+
+**Para apagar todo:** `Ctrl + C` en cada terminal.
+
+---
+
+## 7. Reglas útiles para probar y presentar
+
+- **Reserva:** dura 5 minutos; después el asiento vuelve a estar disponible.
+- **Validación de entradas:** solo acepta entradas desde 2 horas antes de la función hasta que termina. Para probar una validación, compra entradas de una función que empiece pronto. Si el resultado es "otra función", la entrada no está dentro de esa ventana.
+- **Funciones con fechas pasadas:** la cartelera solo muestra funciones futuras. Si las de prueba ya pasaron, créalas nuevas desde el panel del administrador (o consulta la carpeta `docs/`).
+- **Pago simulado:** en la pantalla de pago hay una casilla para simular un pago rechazado.
+- **Seguridad en desarrollo:** nunca subas el `.env` al repositorio y no uses estas contraseñas fuera de tu computador.
+
+---
+
+## 8. Respaldo y restauración de la base de datos
+
+```powershell
+scripts\backup.ps1
+scripts\restore.ps1
+```
+
+El primero crea una copia en la carpeta `backups\` (conserva las últimas 14); el segundo la restaura en una base distinta para comprobar que funciona. Los detalles están en `docs\`.
+
+---
+
+## 9. Documentación
+
+Dentro de la carpeta `docs\`:
+
+- `API.md`: todos los endpoints con ejemplos de petición, respuesta y errores
+- `MODELO_DATOS.md`: las tablas y su diagrama entidad-relación
+- `ROLES.md`: qué rol puede usar cada endpoint
+- `postman\`: colección y entorno de Postman para probar la API sin la interfaz
+
+---
+
+## 10. Solución de problemas
+
+| Problema | Causa y solución |
 |---|---|
-| [`docs/API.md`](docs/API.md) | **Todos los endpoints**: método, ruta, rol, cuerpo, respuesta y errores (para conectar el frontend) |
-| [`docs/ROLES.md`](docs/ROLES.md) | Matriz de endpoints y roles (generada desde el código) |
-| [`docs/MODELO_DATOS.md`](docs/MODELO_DATOS.md) | Tablas, enumeraciones, índices y diagrama entidad-relación |
-| [`docs/RESPALDO.md`](docs/RESPALDO.md) | Respaldo, restauración y tarea programada |
-| [`docs/postman/`](docs/postman) | Colección y entorno de Postman |
+| `No module named 'flask'` | El entorno virtual no está activo: ejecuta `venv\Scripts\Activate.ps1` |
+| `Fatal error in launcher` al usar `pip` | El entorno se creó en otra carpeta o con otro nombre: bórralo (`Remove-Item -Recurse -Force venv`), créalo de nuevo y usa `python -m pip` |
+| `password authentication failed` | La contraseña del `DATABASE_URL` no es la de PostgreSQL |
+| `database "sivec" does not exist` | Falta crear la base (paso 3.2) |
+| `connection refused` al conectar a la base | El servicio de PostgreSQL está detenido: inícialo desde `services.msc` |
+| `/api/salud` dice `"base_datos"` con error | Revisa `DATABASE_URL` en el `.env` y que PostgreSQL esté activo |
+| La interfaz dice "No se pudo conectar con el servidor" o error de CORS | La API no está corriendo, o abriste la interfaz como `127.0.0.1`. Usa `http://localhost:5173` y revisa `CORS_ORIGENES` |
+| `Address already in use` (puerto 5000) | Otro programa usa ese puerto: ciérralo o reinicia la terminal anterior de la API |
+| Cambié el `.env` y no pasa nada | El `.env` solo se lee al arrancar: detén la API (`Ctrl + C`) y vuelve a ejecutar `python run.py` |
+| `Dubious ownership` en Git | Ejecuta el comando `git config --global --add safe.directory ...` que Git te muestra |
 
-## Comandos útiles
+---
 
-```powershell
-flask --app run routes                         # lista de endpoints
-flask --app run db migrate -m "descripcion"    # generar una migración tras cambiar un modelo
-flask --app run db upgrade                     # aplicar migraciones
-flask --app run seed                           # datos de prueba
-python -m scripts.generar_roles                # regenerar docs/ROLES.md
-python -m scripts.generar_postman              # regenerar la colección de Postman
-```
+## 11. Trabajo en equipo con Git
 
-Si cambias un modelo, genera la migración: la prueba `test_modelos_y_migraciones_estan_sincronizados` falla si se olvida.
-Si agregas una ruta, ponle `@rol_requerido(...)`: la prueba de roles falla si queda abierta por descuido.
+- Antes de empezar a trabajar: `git pull`
+- Crea una rama por tarea: `git checkout -b nombre-de-la-tarea`
+- Guarda cambios: `git add .` y `git commit -m "mensaje claro"`
+- Sube tu rama: `git push -u origin nombre-de-la-tarea` y abre un Pull Request en GitHub
+- **Nunca** subas `.env`, `venv/`, `backups/` ni contraseñas. Si dudas, revisa `git status` antes del commit.
 
-## Reglas de negocio importantes
+---
 
-- Un asiento tiene un solo estado (`disponible`, `reservado`, `vendido`) y no se puede tomar si ya está ocupado.
-- La reserva dura 5 minutos (`RESERVA_DURACION_MINUTOS`); al vencer, el asiento vuelve a estar disponible.
-- Reservar, comprar y validar ocurren en **una transacción** con `SELECT ... FOR UPDATE`; si algún asiento falla, no se hace nada.
-- Un pago rechazado no genera entradas y deja los asientos reservados hasta que venza la reserva.
-- Cada entrada tiene un código único y se usa **una sola vez**; solo vale para su función y asiento.
-- Al cancelar una función, sus entradas activas pasan a «anulada».
-- Todas las fechas se guardan en UTC y la API las devuelve en hora de Bogotá (UTC-5).
+## 12. Equipo
 
-## Solución de problemas
-
-| Síntoma | Causa y solución |
-|---|---|
-| `RuntimeError: Either 'SQLALCHEMY_DATABASE_URI'... must be set` | No existe `.env` o le falta `DATABASE_URL`. Ejecuta `Copy-Item .env.example .env` y complétalo. |
-| `password authentication failed for user "postgres"` | La clave del `DATABASE_URL` es incorrecta. Si tiene caracteres especiales, codifícala (`@` → `%40`). |
-| `database "sivec" does not exist` | Crea la base: `psql -U postgres -c "CREATE DATABASE sivec;"` |
-| `relation "usuarios" does not exist` | Faltan las tablas: `flask --app run db upgrade` |
-| `psql no se reconoce como un comando` | Agrega `C:\Program Files\PostgreSQL\17\bin` al `PATH` o usa la ruta completa. |
-| `connection refused` / no conecta | PostgreSQL no está iniciado. Abre «Servicios» de Windows e inicia `postgresql-x64-17`. |
-| `Activate.ps1 ... la ejecución de scripts está deshabilitada` | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
-| `Address already in use` (puerto 5000) | Otro programa usa el 5000. Ciérralo o cambia `FLASK_PORT` en el `.env`. |
-| Otro equipo no llega a la API (`connection refused`) | La API escucha solo en `127.0.0.1`. Ver «Ejecutar la API» para abrirla a la red de forma segura (`FLASK_HOST`). |
-| El frontend recibe un error de CORS | Agrega su dirección exacta (con puerto) a `CORS_ORIGENES` en el `.env` y reinicia la API. |
-| `401 TOKEN_VENCIDO` | La sesión expiró (`JWT_EXPIRACION_MINUTOS`). Inicia sesión de nuevo. |
-| La cartelera está vacía | Las funciones del seed duran 7 días desde que se cargaron. Vuelve a ejecutar `flask --app run seed`. |
-| Una validación responde `otra_funcion` aunque el código es correcto | Solo se acepta desde 120 min antes del inicio de la función hasta que termina (`VALIDACION_ANTICIPACION_MINUTOS`). |
-| `pytest`: `Falta TEST_DATABASE_URL` / `debe llevar 'test'` / `misma base` | Define `TEST_DATABASE_URL` en el `.env` con una base **distinta** cuyo nombre incluya «test». |
-| `ModuleNotFoundError: No module named 'app'` al probar | Ejecuta `python -m pytest` desde la raíz del proyecto (no `pytest` desde otra carpeta). |
-| `flask` dice que no encuentra la aplicación | Usa `flask --app run <comando>` o agrega `FLASK_APP=run.py` al `.env`. |
-| Las reservas vencidas no se liberan solas | El job corre al iniciar la API con `python run.py` (cada 30 s). Aunque no corra, la API ignora las vencidas al leer y reservar. |
-| `pip install` falla compilando `psycopg2` | Este proyecto usa `psycopg2-binary`; actualiza pip (`python -m pip install --upgrade pip`) y usa Python 3.11–3.12. |
+Alfredo Leal, Edgar Rodelo, Miguelangel De La Hoz, Alejandro Arevalo y Haider Cantillo.
+Programa: Ingeniería de Sistemas y Computación, semestre VIII. Asignatura: Administración de Sistemas de Información. Docente: Janer E. Pava.
