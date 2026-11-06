@@ -50,7 +50,7 @@ Se recomienda clonar ambos repositorios en la misma carpeta, por ejemplo `C:\pro
 
 ```powershell
 cd C:\proyectos
-git clone https://github.com/USUARIO/sivec-api.git
+git clone https://github.com/Alfre2106/sivec-api.git
 cd sivec-api
 ```
 
